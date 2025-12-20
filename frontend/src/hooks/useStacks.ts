@@ -9,12 +9,27 @@ const userSession = new UserSession({ appConfig });
 const network = NETWORK === 'mainnet' ? STACKS_MAINNET : STACKS_TESTNET;
 
 export const useStacks = () => {
-  const [userData, setUserData] = useState(userSession.loadUserData());
+  const [userData, setUserData] = useState(() => {
+    try {
+      return userSession.isUserSignedIn() ? userSession.loadUserData() : undefined;
+    } catch (error) {
+      console.warn('Error loading user data:', error);
+      return undefined;
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (userSession.isUserSignedIn()) {
-      setUserData(userSession.loadUserData());
+    try {
+      if (userSession.isUserSignedIn()) {
+        const data = userSession.loadUserData();
+        setUserData(data || undefined);
+      } else {
+        setUserData(undefined);
+      }
+    } catch (error) {
+      console.warn('Error in useStacks useEffect:', error);
+      setUserData(undefined);
     }
   }, []);
 
@@ -28,7 +43,13 @@ export const useStacks = () => {
         },
         redirectTo: '/',
         onFinish: () => {
-          setUserData(userSession.loadUserData());
+          try {
+            const data = userSession.loadUserData();
+            setUserData(data || undefined);
+          } catch (error) {
+            console.error('Error loading user data after connect:', error);
+            setUserData(undefined);
+          }
           setIsLoading(false);
         },
         onCancel: () => {
@@ -42,8 +63,12 @@ export const useStacks = () => {
   };
 
   const disconnectWallet = () => {
-    userSession.signUserOut();
-    setUserData(undefined as any);
+    try {
+      userSession.signUserOut();
+    } catch (error) {
+      console.warn('Error signing out:', error);
+    }
+    setUserData(undefined);
   };
 
   return {

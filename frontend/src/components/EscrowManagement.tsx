@@ -44,7 +44,15 @@ export const EscrowManagement = ({ listingId, userRole }: EscrowManagementProps)
 
     setIsSubmitting(true);
     try {
-      const userData = userSession.loadUserData();
+      let userData;
+      try {
+        userData = userSession.loadUserData();
+      } catch (error) {
+        alert('Please connect your wallet first');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!userData || !userData.appPrivateKey) {
         alert('Wallet not properly connected');
         setIsSubmitting(false);
@@ -92,7 +100,15 @@ export const EscrowManagement = ({ listingId, userRole }: EscrowManagementProps)
   const handleConfirmReceipt = async () => {
     setIsSubmitting(true);
     try {
-      const userData = userSession.loadUserData();
+      let userData;
+      try {
+        userData = userSession.loadUserData();
+      } catch (error) {
+        alert('Please connect your wallet first');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!userData || !userData.appPrivateKey) {
         alert('Wallet not properly connected');
         setIsSubmitting(false);
@@ -136,7 +152,15 @@ export const EscrowManagement = ({ listingId, userRole }: EscrowManagementProps)
 
     setIsSubmitting(true);
     try {
-      const userData = userSession.loadUserData();
+      let userData;
+      try {
+        userData = userSession.loadUserData();
+      } catch (error) {
+        alert('Please connect your wallet first');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!userData || !userData.appPrivateKey) {
         alert('Wallet not properly connected');
         setIsSubmitting(false);
@@ -179,7 +203,15 @@ export const EscrowManagement = ({ listingId, userRole }: EscrowManagementProps)
   const handleReleaseEscrow = async () => {
     setIsSubmitting(true);
     try {
-      const userData = userSession.loadUserData();
+      let userData;
+      try {
+        userData = userSession.loadUserData();
+      } catch (error) {
+        alert('Please connect your wallet first');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!userData || !userData.appPrivateKey) {
         alert('Wallet not properly connected');
         setIsSubmitting(false);

@@ -7,7 +7,16 @@ export const useContract = () => {
 
   const getListing = useCallback(async (id: number) => {
     try {
-      const sender = userSession.loadUserData()?.profile?.stxAddress?.mainnet || CONTRACT_ID.split('.')[0];
+      let sender = CONTRACT_ID.split('.')[0];
+      try {
+        const userData = userSession.loadUserData();
+        if (userData?.profile?.stxAddress?.mainnet) {
+          sender = userData.profile.stxAddress.mainnet;
+        }
+      } catch (error) {
+        // User not signed in, use contract address as sender
+        console.warn('User not signed in, using contract address as sender');
+      }
       const response = await fetch(`${API_URL}/v2/contracts/call-read/${CONTRACT_ID}/get-listing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -31,11 +40,21 @@ export const useContract = () => {
 
   const getEscrowStatus = useCallback(async (listingId: number) => {
     try {
+      let sender = CONTRACT_ID.split('.')[0];
+      try {
+        const userData = userSession.loadUserData();
+        if (userData?.profile?.stxAddress?.mainnet) {
+          sender = userData.profile.stxAddress.mainnet;
+        }
+      } catch (error) {
+        // User not signed in, use contract address as sender
+        console.warn('User not signed in, using contract address as sender');
+      }
       const response = await fetch(`${API_URL}/v2/contracts/call-read/${CONTRACT_ID}/get-escrow-status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sender: userSession.loadUserData()?.profile?.stxAddress?.mainnet || CONTRACT_ID.split('.')[0],
+          sender,
           arguments: [listingId.toString()],
         }),
       });

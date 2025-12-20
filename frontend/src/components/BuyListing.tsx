@@ -23,7 +23,15 @@ export const BuyListing = ({ listingId, price, onSuccess, onError }: BuyListingP
 
     setIsSubmitting(true);
     try {
-      const userData = userSession.loadUserData();
+      let userData;
+      try {
+        userData = userSession.loadUserData();
+      } catch (error) {
+        onError?.('Please connect your wallet first');
+        setIsSubmitting(false);
+        return;
+      }
+      
       if (!userData || !userData.appPrivateKey) {
         onError?.('Wallet not properly connected');
         setIsSubmitting(false);

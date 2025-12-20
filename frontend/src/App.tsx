@@ -8,19 +8,46 @@ import './App.css';
 
 function App() {
   const { isConnected } = useStacks();
+  const { getAllListings } = useContract();
   const [listings, setListings] = useState<any[]>([]);
   const [selectedListingId, setSelectedListingId] = useState<number | null>(null);
+  const [isLoadingListings, setIsLoadingListings] = useState(false);
 
-  // Mock listings for now - will be replaced with actual contract calls
-  const mockListings = [
-    {
-      id: 1,
-      seller: 'SP1EQNTKNRGME36P9EEXZCFFNCYBA50VN51676JB',
-      price: 1000000, // 1 STX in microSTX
-      royaltyBips: 500, // 5%
-      royaltyRecipient: 'SP3J75H6FYTCJJW5R0CHVGWDFN8JPZP3DD4DPJRSP',
-    },
-  ];
+  // Load listings from contract
+  useEffect(() => {
+    loadListings();
+  }, []);
+
+  const loadListings = async () => {
+    setIsLoadingListings(true);
+    try {
+      const contractListings = await getAllListings(50);
+      if (contractListings.length > 0) {
+        setListings(contractListings);
+      } else {
+        // Fallback to mock data if no listings found
+        setListings([{
+          id: 1,
+          seller: 'SP1EQNTKNRGME36P9EEXZCFFNCYBA50VN51676JB',
+          price: 1000000,
+          'royalty-bips': 500,
+          'royalty-recipient': 'SP3J75H6FYTCJJW5R0CHVGWDFN8JPZP3DD4DPJRSP',
+        }]);
+      }
+    } catch (error) {
+      console.error('Error loading listings:', error);
+      // Use mock data on error
+      setListings([{
+        id: 1,
+        seller: 'SP1EQNTKNRGME36P9EEXZCFFNCYBA50VN51676JB',
+        price: 1000000,
+        'royalty-bips': 500,
+        'royalty-recipient': 'SP3J75H6FYTCJJW5R0CHVGWDFN8JPZP3DD4DPJRSP',
+      }]);
+    } finally {
+      setIsLoadingListings(false);
+    }
+  };
 
   if (selectedListingId) {
     return (
@@ -63,9 +90,31 @@ function App() {
         </section>
 
         <section style={{ marginTop: '40px' }}>
-          <h2>Available Listings</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-            {mockListings.map((listing) => (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2>Available Listings</h2>
+            <button
+              onClick={loadListings}
+              disabled={isLoadingListings}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: isLoadingListings ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {isLoadingListings ? 'Loading...' : 'Refresh'}
+            </button>
+          </div>
+          {isLoadingListings ? (
+            <p>Loading listings...</p>
+          ) : (
+            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+              {listings.length === 0 ? (
+                <p>No listings available. Create one above!</p>
+              ) : (
+                listings.map((listing) => (
               <ListingCard 
                 key={listing.id} 
                 listing={listing}

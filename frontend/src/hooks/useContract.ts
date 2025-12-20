@@ -53,9 +53,34 @@ export const useContract = () => {
     }
   }, [API_URL, CONTRACT_ID, userSession]);
 
+  const getAllListings = useCallback(async (limit = 100) => {
+    // Note: This is a simplified version - in production, you'd need to track listing IDs
+    // or use an indexer. For now, we'll try to fetch listings by ID incrementally.
+    const listings = [];
+    try {
+      // Start from ID 1 and try to fetch until we hit errors
+      for (let id = 1; id <= limit; id++) {
+        try {
+          const listing = await getListing(id);
+          if (listing && listing.value) {
+            listings.push({ id, ...listing.value });
+          }
+        } catch (err) {
+          // Listing doesn't exist, continue
+          break;
+        }
+      }
+      return listings;
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+      return [];
+    }
+  }, [getListing]);
+
   return {
     getListing,
     getEscrowStatus,
+    getAllListings,
   };
 };
 

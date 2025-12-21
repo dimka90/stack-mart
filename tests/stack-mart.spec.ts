@@ -143,4 +143,47 @@ describe("stack-mart escrow flow", () => {
     // Buyer's balance should be reduced
     expect(getStxBalance(buyer)).toBe(buyerBefore - 5_000n);
   });
+
+  it("seller attests delivery and transfers NFT", () => {
+    // Create listing
+    simnet.callPublicFn(
+      contractName,
+      "create-listing",
+      [Cl.uint(3_000), Cl.uint(300), Cl.principal(royaltyRecipient)],
+      seller
+    );
+
+    // Buy with escrow
+    simnet.callPublicFn(
+      contractName,
+      "buy-listing-escrow",
+      [Cl.uint(1)],
+      buyer
+    );
+
+    // Seller attests delivery
+    const deliveryHash = Cl.bufferFromHex("0000000000000000000000000000000000000000000000000000000000000001");
+    const attestResult = simnet.callPublicFn(
+      contractName,
+      "attest-delivery",
+      [Cl.uint(1), deliveryHash],
+      seller
+    );
+
+    expect(attestResult.result).toBeOk(Cl.bool(true));
+
+    // Check escrow state changed to "delivered"
+    const escrowStatus = simnet.callReadOnlyFn(
+      contractName,
+      "get-escrow-status",
+      [Cl.uint(1)],
+      deployer
+    );
+
+    expect(escrowStatus.result).toBeOk(
+      Cl.tuple({
+        state: Cl.stringAscii("delivered"),
+      })
+    );
+  });
 });

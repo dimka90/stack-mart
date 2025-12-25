@@ -1,4 +1,5 @@
 import { useStacks } from '../hooks/useStacks';
+import { formatAddress } from '../utils/validation';
 
 export const WalletButton = () => {
   const { isConnected, connectWallet, disconnectWallet, userData, isLoading } = useStacks();

@@ -7,7 +7,7 @@ export const WalletButton = () => {
   if (isConnected && userData?.profile?.stxAddress) {
     const address = userData.profile.stxAddress.mainnet || userData.profile.stxAddress.testnet;
     if (!address) return null;
-    const shortAddress = `${address.slice(0, 6)}...${address.slice(-4)}`;
+    const shortAddress = formatAddress(address);
 
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

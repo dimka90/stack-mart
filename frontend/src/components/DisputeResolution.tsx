@@ -99,7 +99,7 @@ export const DisputeResolution = ({ listingId, escrowId }: DisputeResolutionProp
         network,
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
-        fee: 150000,
+        fee: TRANSACTION_FEE,
       };
 
       const transaction = await makeContractCall(txOptions);
@@ -158,7 +158,7 @@ export const DisputeResolution = ({ listingId, escrowId }: DisputeResolutionProp
         network,
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
-        fee: 150000,
+        fee: TRANSACTION_FEE,
       };
 
       const transaction = await makeContractCall(txOptions);
@@ -214,7 +214,7 @@ export const DisputeResolution = ({ listingId, escrowId }: DisputeResolutionProp
         network,
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
-        fee: 150000,
+        fee: TRANSACTION_FEE,
       };
 
       const transaction = await makeContractCall(txOptions);
@@ -263,7 +263,7 @@ export const DisputeResolution = ({ listingId, escrowId }: DisputeResolutionProp
         network,
         anchorMode: AnchorMode.Any,
         postConditionMode: PostConditionMode.Allow,
-        fee: 150000,
+        fee: TRANSACTION_FEE,
       };
 
       const transaction = await makeContractCall(txOptions);
@@ -411,7 +411,7 @@ export const DisputeResolution = ({ listingId, escrowId }: DisputeResolutionProp
               </>
             )}
 
-            {Number(buyerStakes) + Number(sellerStakes) >= 5000000 && (
+            {Number(buyerStakes) + Number(sellerStakes) >= DISPUTE_RESOLUTION_THRESHOLD_MICROSTX && (
               <button
                 onClick={handleResolve}
                 disabled={isSubmitting || !isConnected}

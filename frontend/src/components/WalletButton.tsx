@@ -2,9 +2,10 @@ import { useStacks } from '../hooks/useStacks';
 import { formatAddress } from '../utils/validation';
 import { useAppKit } from '@reown/appkit/react';
 import { useAccount } from 'wagmi';
+import { BitcoinWalletSelector } from './BitcoinWalletSelector';
 
 export const WalletButton = () => {
-  const { isConnected, connectWallet, disconnectWallet, userData, isLoading, appKitAddress, isAppKitConnected } = useStacks();
+  const { isConnected, connectWallet, disconnectWallet, userData, isLoading, appKitAddress, isAppKitConnected, userSession } = useStacks();
   const { open } = useAppKit();
   const { address, isConnected: isAppKitAccountConnected } = useAccount();
 
@@ -12,9 +13,25 @@ export const WalletButton = () => {
   const connectedAddress = appKitAddress || address || (userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet);
   const walletConnected = isConnected || isAppKitConnected || isAppKitAccountConnected;
 
-  if (walletConnected && connectedAddress) {
-    const shortAddress = formatAddress(connectedAddress);
+  // Use Bitcoin wallet selector for Stacks/Bitcoin wallets
+  // AppKit is for EVM chains
+  if (walletConnected && connectedAddress && !isAppKitAccountConnected) {
+    // Show Bitcoin wallet selector for Stacks wallets
+    return (
+      <BitcoinWalletSelector
+        userSession={userSession}
+        onConnect={connectWallet}
+        onDisconnect={disconnectWallet}
+        isConnected={isConnected}
+        userData={userData}
+        isLoading={isLoading}
+      />
+    );
+  }
 
+  // If AppKit (EVM) wallet is connected, show that
+  if (isAppKitAccountConnected && address) {
+    const shortAddress = formatAddress(address);
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
         <div style={{ 
@@ -34,49 +51,32 @@ export const WalletButton = () => {
             backgroundColor: 'var(--success)',
             display: 'inline-block'
           }}></span>
-          {shortAddress}
+          {shortAddress} (EVM)
         </div>
         <button 
           className="btn btn-secondary btn-sm"
-          onClick={disconnectWallet} 
+          onClick={() => {
+            // Disconnect AppKit wallet
+            window.location.reload();
+          }} 
           disabled={isLoading}
           style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)' }}
         >
-          {isLoading ? (
-            <>
-              <span className="loading"></span>
-              Disconnecting...
-            </>
-          ) : (
-            'Disconnect'
-          )}
+          Disconnect
         </button>
       </div>
     );
   }
 
+  // Show Bitcoin wallet selector by default
   return (
-    <button 
-      className="btn btn-primary"
-      onClick={() => {
-        // Use AppKit's open function for modern wallet UI
-        if (open) {
-          open();
-        } else {
-          connectWallet();
-        }
-      }} 
-      disabled={isLoading}
-      style={{ backgroundColor: 'rgba(255, 255, 255, 0.2)', color: 'white', border: '1px solid rgba(255, 255, 255, 0.3)' }}
-    >
-      {isLoading ? (
-        <>
-          <span className="loading"></span>
-          Connecting...
-        </>
-      ) : (
-        '🔗 Connect Wallet'
-      )}
-    </button>
+    <BitcoinWalletSelector
+      userSession={userSession}
+      onConnect={connectWallet}
+      onDisconnect={disconnectWallet}
+      isConnected={isConnected}
+      userData={userData}
+      isLoading={isLoading}
+    />
   );
 };

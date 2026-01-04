@@ -42,36 +42,18 @@ export const useStacks = () => {
   const connectWallet = async () => {
     setIsLoading(true);
     try {
-      // Use AppKit for modern wallet connection UI
-      // This opens the AppKit modal for EVM wallets
-      // For Stacks, we still use showConnect below
-      if (open) {
-        open();
+      // Reload user data after connection
+      // This is called from BitcoinWalletSelector after successful connection
+      try {
+        const data = userSession.loadUserData();
+        setUserData(data || undefined);
+      } catch (error) {
+        console.error('Error loading user data after connect:', error);
+        setUserData(undefined);
       }
-      
-      // Also show Stacks Connect for Stacks-specific wallets
-      showConnect({
-        appDetails: {
-          name: 'StackMart',
-          icon: window.location.origin + '/vite.svg',
-        },
-        redirectTo: '/',
-        onFinish: () => {
-          try {
-            const data = userSession.loadUserData();
-            setUserData(data || undefined);
-          } catch (error) {
-            console.error('Error loading user data after connect:', error);
-            setUserData(undefined);
-          }
-          setIsLoading(false);
-        },
-        onCancel: () => {
-          setIsLoading(false);
-        },
-      });
+      setIsLoading(false);
     } catch (error) {
-      console.error('Error connecting wallet:', error);
+      console.error('Error in connectWallet:', error);
       setIsLoading(false);
     }
   };

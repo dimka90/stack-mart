@@ -14,8 +14,8 @@ export const UnifiedWalletSelector = () => {
   const [showOptions, setShowOptions] = useState(false);
 
   const walletOptions = [
-    { value: 'stacks' as WalletOption, label: 'Stacks Connect', icon: '⛓️', description: 'Native Stacks blockchain' },
-    { value: 'appkit' as WalletOption, label: 'Reown AppKit', icon: '🔌', description: 'Multi-wallet support' },
+    { value: 'stacks' as WalletOption, label: 'Bitcoin Wallets', icon: '₿', description: 'Leather, Xverse & more' },
+    { value: 'appkit' as WalletOption, label: 'Reown AppKit', icon: '🔌', description: 'EVM multi-wallet support' },
     { value: 'walletkit' as WalletOption, label: 'WalletKit', icon: '⚡', description: 'Gasless transactions' },
   ];
 

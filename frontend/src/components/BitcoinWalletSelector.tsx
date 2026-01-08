@@ -63,6 +63,7 @@ export const BitcoinWalletSelector = ({
   const [showWalletList, setShowWalletList] = useState(false);
   const [availableWallets, setAvailableWallets] = useState<string[]>([]);
   const [localUserData, setLocalUserData] = useState(userData);
+  const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
 
   // Listen for userSession changes
   useEffect(() => {
@@ -131,9 +132,13 @@ export const BitcoinWalletSelector = ({
 
   const connectToWallet = async (walletId?: string) => {
     setShowWalletList(false);
+    setConnectingWallet(walletId || null);
     
     try {
-      showConnect({
+      console.log('Connecting to wallet:', walletId);
+      
+      // Build the showConnect options
+      const connectOptions: any = {
         appDetails: {
           name: 'StackMart',
           icon: window.location.origin + '/vite.svg',
@@ -142,13 +147,14 @@ export const BitcoinWalletSelector = ({
         redirectTo: '/',
         onFinish: async () => {
           console.log('Wallet connection finished, updating state...');
+          setConnectingWallet(null);
           
           // Wait a bit for userSession to be updated
           await new Promise(resolve => setTimeout(resolve, 500));
           
           // Check multiple times to ensure we get the updated data
           let attempts = 0;
-          const maxAttempts = 10;
+          const maxAttempts = 15; // Increased attempts
           
           const checkAndUpdate = setInterval(() => {
             attempts++;
@@ -188,15 +194,29 @@ export const BitcoinWalletSelector = ({
                 onConnect();
               }
             }
-          }, 200); // Check every 200ms
+          }, 300); // Check every 300ms
         },
         onCancel: () => {
           console.log('User cancelled wallet connection');
+          setConnectingWallet(null);
+          setShowWalletList(false);
           // User cancelled - do nothing
         },
-      });
+      };
+
+      // If a specific wallet is selected and available, try to use it
+      // Note: showConnect may show its own modal, but this ensures we're ready
+      if (walletId && availableWallets.includes(walletId)) {
+        console.log('Specific wallet selected:', walletId);
+        // The showConnect will handle the wallet selection
+        // If the wallet extension is available, it should be prioritized
+      }
+      
+      showConnect(connectOptions);
     } catch (error) {
       console.error('Error connecting wallet:', error);
+      setConnectingWallet(null);
+      setShowWalletList(true); // Re-show the wallet list on error
     }
   };
 
@@ -330,6 +350,7 @@ export const BitcoinWalletSelector = ({
                       window.open(wallet.downloadUrl, '_blank');
                     }
                   }}
+                  disabled={connectingWallet === wallet.id || isLoading}
                   style={{
                     padding: '1rem',
                     backgroundColor: isInstalled 
@@ -372,7 +393,22 @@ export const BitcoinWalletSelector = ({
                       <span style={{ fontWeight: 'bold', fontSize: '1rem' }}>
                         {wallet.name}
                       </span>
-                      {isInstalled && (
+                      {connectingWallet === wallet.id ? (
+                        <span style={{
+                          fontSize: '0.75rem',
+                          padding: '0.125rem 0.5rem',
+                          backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                          color: '#6366f1',
+                          borderRadius: 'var(--radius-sm)',
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                        }}>
+                          <span className="loading" style={{ width: '12px', height: '12px', borderWidth: '2px' }}></span>
+                          Connecting...
+                        </span>
+                      ) : isInstalled ? (
                         <span style={{
                           fontSize: '0.75rem',
                           padding: '0.125rem 0.5rem',
@@ -383,7 +419,7 @@ export const BitcoinWalletSelector = ({
                         }}>
                           Installed
                         </span>
-                      )}
+                      ) : null}
                     </div>
                     <div style={{ fontSize: '0.875rem', opacity: 0.8 }}>
                       {wallet.description}

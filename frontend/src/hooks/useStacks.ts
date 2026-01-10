@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { connect, isConnected, disconnect, getLocalStorage, request } from '@stacks/connect';
+import { connect, isConnected, disconnect, getLocalStorage } from '@stacks/connect';
 import { STACKS_MAINNET, STACKS_TESTNET } from '@stacks/network';
 import { NETWORK } from '../config/contract';
 import { useAppKit } from '@reown/appkit/react';
@@ -9,7 +9,6 @@ const network = NETWORK === 'mainnet' ? STACKS_MAINNET : STACKS_TESTNET;
 
 export const useStacks = () => {
   // AppKit hooks for modern wallet UI
-  const { open } = useAppKit();
   const { address: appKitAddress, isConnected: isAppKitConnected } = useAccount();
   
   const [userData, setUserData] = useState(() => {
@@ -104,8 +103,10 @@ export const useStacks = () => {
       console.log('Connected:', response.addresses);
       
       // Update state with connection data
-      if (response.addresses) {
-        setUserData(response);
+      // After connect(), get the data from localStorage
+      const data = getLocalStorage();
+      if (data) {
+        setUserData(data);
         setIsStacksConnected(true);
       }
       

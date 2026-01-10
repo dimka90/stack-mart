@@ -120,19 +120,51 @@ export const useStacks = () => {
 
   const disconnectWallet = () => {
     try {
-      userSession.signUserOut();
+      disconnect();
+      console.log('User disconnected');
+      setUserData(undefined);
+      setIsStacksConnected(false);
     } catch (error) {
       console.warn('Error signing out:', error);
+      setUserData(undefined);
+      setIsStacksConnected(false);
     }
-    setUserData(undefined);
   };
 
   // Check if either Stacks or AppKit wallet is connected
-  const isConnected = isStacksConnected || isAppKitConnected;
+  const isConnectedValue = isStacksConnected || isAppKitConnected;
+
+  // Compatibility wrapper for userSession (for backward compatibility with existing code)
+  const userSession = {
+    isUserSignedIn: () => {
+      try {
+        return isConnected();
+      } catch (error) {
+        return false;
+      }
+    },
+    loadUserData: () => {
+      try {
+        return getLocalStorage();
+      } catch (error) {
+        console.warn('Error loading user data:', error);
+        return undefined;
+      }
+    },
+    signUserOut: () => {
+      try {
+        disconnect();
+        setUserData(undefined);
+        setIsStacksConnected(false);
+      } catch (error) {
+        console.warn('Error signing out:', error);
+      }
+    },
+  };
 
   return {
     userData,
-    isConnected,
+    isConnected: isConnectedValue,
     isLoading,
     connectWallet,
     disconnectWallet,

@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
-import { AppConfig, UserSession, showConnect } from '@stacks/connect';
+import { useState, useEffect } from 'react';
+import { connect, isConnected, disconnect, getLocalStorage, request } from '@stacks/connect';
 import { STACKS_MAINNET, STACKS_TESTNET } from '@stacks/network';
 import { NETWORK } from '../config/contract';
 import { useAppKit } from '@reown/appkit/react';
 import { useAccount } from 'wagmi';
-
-const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
 
 const network = NETWORK === 'mainnet' ? STACKS_MAINNET : STACKS_TESTNET;
 

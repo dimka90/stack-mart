@@ -64,12 +64,12 @@ export const BitcoinWalletSelector = ({
   const [localUserData, setLocalUserData] = useState(userData);
   const [connectingWallet, setConnectingWallet] = useState<string | null>(null);
 
-  // Listen for userSession changes
+  // Listen for connection changes
   useEffect(() => {
     const checkSession = () => {
       try {
-        if (userSession.isUserSignedIn()) {
-          const data = userSession.loadUserData();
+        if (isConnected()) {
+          const data = getLocalStorage();
           setLocalUserData(data || undefined);
         } else {
           setLocalUserData(undefined);
@@ -87,7 +87,7 @@ export const BitcoinWalletSelector = ({
     const interval = setInterval(checkSession, 500);
     
     return () => clearInterval(interval);
-  }, [userSession]);
+  }, []);
 
   // Update local state when prop changes
   useEffect(() => {
@@ -180,7 +180,7 @@ export const BitcoinWalletSelector = ({
 
   // Use local userData if available, fallback to prop
   const currentUserData = localUserData || userData;
-  const currentIsConnected = userSession.isUserSignedIn() || isConnected;
+  const currentIsConnected = isConnected() || isConnected;
 
   // If connected, show connected state
   if (currentIsConnected && currentUserData) {

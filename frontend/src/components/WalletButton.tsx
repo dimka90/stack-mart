@@ -1,5 +1,5 @@
 import { useStacks } from '../hooks/useStacks';
-import { formatAddress } from '../utils/validation';
+import { formatAddress, getStacksAddress } from '../utils/validation';
 import { useAppKit } from '@reown/appkit/react';
 import { useAccount } from 'wagmi';
 import { BitcoinWalletSelector } from './BitcoinWalletSelector';
@@ -10,7 +10,8 @@ export const WalletButton = () => {
   const { address, isConnected: isAppKitAccountConnected } = useAccount();
 
   // Determine which wallet is connected
-  const connectedAddress = appKitAddress || address || (userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet);
+  const stacksAddress = userData ? getStacksAddress(userData) : null;
+  const connectedAddress = appKitAddress || address || stacksAddress;
   const walletConnected = isConnected || isAppKitConnected || isAppKitAccountConnected;
 
   // Use Bitcoin wallet selector for Stacks/Bitcoin wallets

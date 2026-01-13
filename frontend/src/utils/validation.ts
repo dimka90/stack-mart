@@ -42,3 +42,39 @@ export const formatSTX = (microSTX: number | string): string => {
   return (num / 1000000).toFixed(6).replace(/\.?0+$/, '');
 };
 
+/**
+ * Extract Stacks address from userData - supports both old and new API formats
+ * @param userData - User data object from @stacks/connect
+ * @returns Stacks address string or null
+ */
+export const getStacksAddress = (userData: any): string | null => {
+  if (!userData) return null;
+  
+  // Try new API format first (addresses.stx[0].address)
+  if (userData.addresses?.stx?.[0]?.address) {
+    return userData.addresses.stx[0].address;
+  }
+  
+  // Try alternative new API format (addresses.stx as string array)
+  if (Array.isArray(userData.addresses?.stx) && userData.addresses.stx.length > 0) {
+    const firstAddress = userData.addresses.stx[0];
+    if (typeof firstAddress === 'string') {
+      return firstAddress;
+    }
+    if (firstAddress?.address) {
+      return firstAddress.address;
+    }
+  }
+  
+  // Try old API format (profile.stxAddress)
+  if (userData.profile?.stxAddress?.mainnet) {
+    return userData.profile.stxAddress.mainnet;
+  }
+  
+  if (userData.profile?.stxAddress?.testnet) {
+    return userData.profile.stxAddress.testnet;
+  }
+  
+  return null;
+};
+

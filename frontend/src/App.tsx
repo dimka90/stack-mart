@@ -156,8 +156,20 @@ function App() {
           gap: '10px',
           marginBottom: '2rem',
           borderBottom: '2px solid var(--gray-200)',
-          paddingBottom: '10px'
+          paddingBottom: '10px',
+          alignItems: 'center'
         }}>
+          <button
+            className="btn btn-outline"
+            onClick={goHome}
+            style={{ 
+              borderRadius: '8px 8px 0 0',
+              marginRight: 'auto'
+            }}
+            title="Go to home (Listings)"
+          >
+            🏠 Home
+          </button>
           <button
             className={`btn ${activeTab === 'dashboard' ? 'btn-primary' : 'btn-outline'}`}
             onClick={() => setActiveTab('dashboard')}

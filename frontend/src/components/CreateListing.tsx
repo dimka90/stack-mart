@@ -4,6 +4,7 @@ import { makeContractCall, broadcastTransaction, AnchorMode, PostConditionMode, 
 import { CONTRACT_ID } from '../config/contract';
 import { TRANSACTION_FEE } from '../config/constants';
 import { validatePrice, validateBasisPoints, validateStacksAddress } from '../utils/validation';
+import { MAX_ROYALTY_BIPS } from '../utils/constants';
 
 export const CreateListing = () => {
   const { userSession, network, isConnected } = useStacks();

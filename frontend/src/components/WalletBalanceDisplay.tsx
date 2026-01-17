@@ -45,7 +45,7 @@ export const WalletBalanceDisplay = () => {
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* Stacks Balance */}
-        {stacks.isConnected && stacks.userData?.profile?.stxAddress && (
+        {stacks.isConnected && (stacks.userData as any)?.profile?.stxAddress && (
           <div style={{
             padding: '1rem',
             backgroundColor: 'rgba(99, 102, 241, 0.2)',
@@ -58,7 +58,7 @@ export const WalletBalanceDisplay = () => {
                   Stacks Wallet
                 </div>
                 <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.8)' }}>
-                  {formatAddress(stacks.userData.profile.stxAddress.mainnet || stacks.userData.profile.stxAddress.testnet || '')}
+                  {formatAddress((stacks.userData as any)?.profile?.stxAddress?.mainnet || (stacks.userData as any)?.profile?.stxAddress?.testnet || '')}
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -92,7 +92,7 @@ export const WalletBalanceDisplay = () => {
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
-                {appKitBalanceLoading ? (
+                {isLoading ? (
                   <span style={{ color: 'rgba(255, 255, 255, 0.7)' }}>Loading...</span>
                 ) : appKitBalance ? (
                   <div>

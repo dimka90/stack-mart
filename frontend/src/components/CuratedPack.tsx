@@ -63,7 +63,8 @@ export const CuratedPack = () => {
       return;
     }
 
-    if (!userData?.profile?.stxAddress?.mainnet) {
+    const userDataAny = userData as any;
+    if (!userDataAny?.profile?.stxAddress?.mainnet) {
       alert('Please connect your wallet first');
       return;
     }
@@ -85,7 +86,7 @@ export const CuratedPack = () => {
         return;
       }
 
-      const curatorAddress = userData.profile.stxAddress.mainnet;
+      const curatorAddress = userDataAny.profile.stxAddress.mainnet;
       const priceMicroSTX = Math.floor(parseFloat(packPrice) * 1000000);
 
       // Convert listing IDs to uintCV list (max 20)

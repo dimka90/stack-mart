@@ -34,7 +34,8 @@ export const useAllWallets = () => {
     }
     
     // Try old API format (profile.stxAddress)
-    return stacks.userData.profile?.stxAddress?.mainnet || stacks.userData.profile?.stxAddress?.testnet || null;
+    const userData = stacks.userData as any;
+    return userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet || null;
   };
 
   const connectedWallets = [

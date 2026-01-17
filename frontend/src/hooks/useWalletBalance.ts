@@ -9,9 +9,8 @@ import { useEffect, useState } from 'react';
  */
 export const useWalletBalance = () => {
   const { address: appKitAddress, isConnected: appKitConnected } = useAccount();
-  const { data: appKitBalance, isLoading: appKitBalanceLoading } = useBalance({
+  const { data: appKitBalance } = useBalance({
     address: appKitAddress,
-    enabled: appKitConnected && !!appKitAddress,
   });
   
   const walletKit = useWalletKitLink() as any;
@@ -48,10 +47,11 @@ export const useWalletBalance = () => {
   // Fetch Stacks balance
   useEffect(() => {
     const fetchStacksBalance = async () => {
-      if (stacksConnected && userData?.profile?.stxAddress?.mainnet) {
+      const userDataAny = userData as any;
+      if (stacksConnected && userDataAny?.profile?.stxAddress?.mainnet) {
         setIsLoading(true);
         try {
-          const address = userData.profile.stxAddress.mainnet;
+          const address = userDataAny.profile.stxAddress.mainnet;
           const response = await fetch(
             `https://api.hiro.so/v2/accounts/${address}?proof=0`
           );
@@ -77,10 +77,10 @@ export const useWalletBalance = () => {
     // AppKit balance (EVM chains)
     appKitBalance: appKitBalance ? {
       value: appKitBalance.value,
-      formatted: appKitBalance.formatted,
+      formatted: String(appKitBalance.value / BigInt(10 ** appKitBalance.decimals)),
       symbol: appKitBalance.symbol,
     } : null,
-    appKitBalanceLoading,
+    appKitBalanceLoading: false,
     
     // WalletKit balance
     walletKitBalance,
@@ -89,7 +89,7 @@ export const useWalletBalance = () => {
     stacksBalance,
     
     // Aggregated
-    isLoading: isLoading || appKitBalanceLoading,
+    isLoading: isLoading,
     hasAnyBalance: !!(appKitBalance || walletKitBalance || stacksBalance),
   };
 };

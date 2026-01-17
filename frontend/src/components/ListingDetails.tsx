@@ -62,7 +62,8 @@ export const ListingDetails = ({ listingId, onClose }: ListingDetailsProps) => {
   const nftContract = listingData['nft-contract']?.value || listingData['nft-contract'];
   const tokenId = listingData['token-id']?.value || listingData['token-id'];
 
-  const isSeller = isConnected && userData?.profile?.stxAddress?.mainnet === seller;
+  const userDataAny = userData as any;
+  const isSeller = isConnected && userDataAny?.profile?.stxAddress?.mainnet === seller;
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>

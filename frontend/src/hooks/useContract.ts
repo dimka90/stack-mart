@@ -9,7 +9,7 @@ export const useContract = () => {
     try {
       let sender = CONTRACT_ID.split('.')[0];
       try {
-        const userData = userSession.loadUserData();
+        const userData = userSession.loadUserData() as any;
         if (userData?.profile?.stxAddress?.mainnet) {
           sender = userData.profile.stxAddress.mainnet;
         }
@@ -42,7 +42,7 @@ export const useContract = () => {
     try {
       let sender = CONTRACT_ID.split('.')[0];
       try {
-        const userData = userSession.loadUserData();
+        const userData = userSession.loadUserData() as any;
         if (userData?.profile?.stxAddress?.mainnet) {
           sender = userData.profile.stxAddress.mainnet;
         }
@@ -95,7 +95,7 @@ export const useContract = () => {
     try {
       let sender = CONTRACT_ID.split('.')[0];
       try {
-        const userData = userSession.loadUserData();
+        const userData = userSession.loadUserData() as any;
         if (userData?.profile?.stxAddress?.mainnet) {
           sender = userData.profile.stxAddress.mainnet;
         }
@@ -150,7 +150,7 @@ export const useContract = () => {
     try {
       let sender = CONTRACT_ID.split('.')[0];
       try {
-        const userData = userSession.loadUserData();
+        const userData = userSession.loadUserData() as any;
         if (userData?.profile?.stxAddress?.mainnet) {
           sender = userData.profile.stxAddress.mainnet;
         }
@@ -182,7 +182,7 @@ export const useContract = () => {
     try {
       let sender = CONTRACT_ID.split('.')[0];
       try {
-        const userData = userSession.loadUserData();
+        const userData = userSession.loadUserData() as any;
         if (userData?.profile?.stxAddress?.mainnet) {
           sender = userData.profile.stxAddress.mainnet;
         }

@@ -57,14 +57,15 @@ export const useTransactionHistory = () => {
   // Fetch Stacks transactions
   useEffect(() => {
     const fetchStacksTransactions = async () => {
-      if (!stacksConnected || !userData?.profile?.stxAddress?.mainnet) {
+      const userDataAny = userData as any;
+      if (!stacksConnected || !userDataAny?.profile?.stxAddress?.mainnet) {
         setStacksTransactions([]);
         return;
       }
 
       setIsLoading(true);
       try {
-        const address = userData.profile.stxAddress.mainnet;
+        const address = userDataAny.profile.stxAddress.mainnet;
         const response = await fetch(
           `https://api.hiro.so/extended/v1/address/${address}/transactions?limit=10`
         );

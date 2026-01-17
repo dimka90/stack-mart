@@ -9,7 +9,8 @@ import { mainnet, sepolia, base, polygon } from 'viem/chains';
 export const useNetworkSwitch = () => {
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
-  const { setChain } = useAppKit();
+  const appKit = useAppKit() as any;
+  const setChain = appKit?.setChain;
 
   const supportedChains = [
     { id: mainnet.id, name: 'Ethereum Mainnet', icon: '🔷' },

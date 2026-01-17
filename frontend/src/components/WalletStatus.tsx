@@ -14,7 +14,8 @@ export const WalletStatus = () => {
   const { isConnected: appKitConnected, address: appKitAddress } = useAppKitIntegration();
   const { isConnected: walletKitConnected, address: walletKitAddress } = useWalletKitHook();
 
-  const stacksAddress = userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet;
+  const userDataAny = userData as any;
+  const stacksAddress = userDataAny?.profile?.stxAddress?.mainnet || userDataAny?.profile?.stxAddress?.testnet;
   const hasAnyConnection = stacksConnected || appKitConnected || walletKitConnected;
 
   if (!hasAnyConnection) {

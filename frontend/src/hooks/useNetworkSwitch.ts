@@ -1,5 +1,4 @@
 import { useAccount, useSwitchChain } from 'wagmi';
-import { useAppKit } from '@reown/appkit/react';
 import { mainnet, sepolia, base, polygon } from 'viem/chains';
 
 /**
@@ -9,7 +8,6 @@ import { mainnet, sepolia, base, polygon } from 'viem/chains';
 export const useNetworkSwitch = () => {
   const { chain } = useAccount();
   const { switchChain } = useSwitchChain();
-  const { setChain } = useAppKit();
 
   const supportedChains = [
     { id: mainnet.id, name: 'Ethereum Mainnet', icon: '🔷' },
@@ -20,10 +18,7 @@ export const useNetworkSwitch = () => {
 
   const switchToChain = async (chainId: number) => {
     try {
-      // Use AppKit's setChain for better UX
-      if (setChain) {
-        await setChain({ chainId });
-      } else if (switchChain) {
+      if (switchChain) {
         await switchChain({ chainId });
       }
     } catch (error) {

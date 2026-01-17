@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { CONTRACT_ID, API_URL } from '../config/contract';
 import { useStacks } from './useStacks';
+import { getStacksAddress } from '../utils/validation';
 
 export const useContract = () => {
   const { userSession } = useStacks();
@@ -10,8 +11,9 @@ export const useContract = () => {
       let sender = CONTRACT_ID.split('.')[0];
       try {
         const userData = userSession.loadUserData();
-        if (userData?.profile?.stxAddress?.mainnet) {
-          sender = userData.profile.stxAddress.mainnet;
+        const address = getStacksAddress(userData);
+        if (address) {
+          sender = address;
         }
       } catch (error) {
         // User not signed in, use contract address as sender
@@ -43,8 +45,9 @@ export const useContract = () => {
       let sender = CONTRACT_ID.split('.')[0];
       try {
         const userData = userSession.loadUserData();
-        if (userData?.profile?.stxAddress?.mainnet) {
-          sender = userData.profile.stxAddress.mainnet;
+        const address = getStacksAddress(userData);
+        if (address) {
+          sender = address;
         }
       } catch (error) {
         // User not signed in, use contract address as sender
@@ -96,8 +99,9 @@ export const useContract = () => {
       let sender = CONTRACT_ID.split('.')[0];
       try {
         const userData = userSession.loadUserData();
-        if (userData?.profile?.stxAddress?.mainnet) {
-          sender = userData.profile.stxAddress.mainnet;
+        const address = getStacksAddress(userData);
+        if (address) {
+          sender = address;
         }
       } catch (error) {
         console.warn('User not signed in, using contract address as sender');
@@ -151,8 +155,9 @@ export const useContract = () => {
       let sender = CONTRACT_ID.split('.')[0];
       try {
         const userData = userSession.loadUserData();
-        if (userData?.profile?.stxAddress?.mainnet) {
-          sender = userData.profile.stxAddress.mainnet;
+        const address = getStacksAddress(userData);
+        if (address) {
+          sender = address;
         }
       } catch (error) {
         console.warn('User not signed in, using contract address as sender');
@@ -183,8 +188,9 @@ export const useContract = () => {
       let sender = CONTRACT_ID.split('.')[0];
       try {
         const userData = userSession.loadUserData();
-        if (userData?.profile?.stxAddress?.mainnet) {
-          sender = userData.profile.stxAddress.mainnet;
+        const address = getStacksAddress(userData);
+        if (address) {
+          sender = address;
         }
       } catch (error) {
         console.warn('User not signed in, using contract address as sender');

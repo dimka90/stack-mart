@@ -7,7 +7,7 @@
 
 import { useAppKit } from '@reown/appkit/react';
 import { useAccount, useWriteContract } from 'wagmi';
-import { useWalletKit } from '@walletkit/react-link';
+import { useWalletKitLink } from '@walletkit/react-link';
 import { useAllWallets } from '../hooks/useAllWallets';
 import { formatEVMAddress } from '../utils/appkit';
 import { formatWalletKitAddress } from '../utils/walletkit';
@@ -38,7 +38,7 @@ export const AppKitExample = () => {
  * Example 2: WalletKit Gasless Transaction
  */
 export const WalletKitExample = () => {
-  const walletKit = useWalletKit();
+  const walletKit = useWalletKitLink() as any;
 
   const handleGaslessTransaction = async () => {
     if (!walletKit?.isConnected) {
@@ -102,7 +102,7 @@ export const EVMTransactionExample = () => {
       ],
       functionName: 'transfer',
       args: ['0x...' as `0x${string}`, BigInt('1000000000000000000')],
-    });
+    } as any);
   };
 
   return (
@@ -208,7 +208,7 @@ export const MultiWalletTransactionExample = () => {
             abi: [],
             functionName: 'transfer',
             args: [],
-          });
+          } as any);
         }
         break;
 

@@ -20,7 +20,7 @@ export const Dashboard = () => {
 
     const getPrincipal = () => {
         try {
-            const userData = userSession.loadUserData();
+            const userData = userSession.loadUserData() as any;
             return userData?.profile?.stxAddress?.mainnet || userData?.profile?.stxAddress?.testnet;
         } catch (e) {
             return null;

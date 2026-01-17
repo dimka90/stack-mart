@@ -1,6 +1,7 @@
 import { useAccount, useBalance } from 'wagmi';
 import { useWalletKitLink } from '@walletkit/react-link';
 import { useStacks } from './useStacks';
+import { getStacksAddress } from '../utils/validation';
 import { useEffect, useState } from 'react';
 
 /**
@@ -9,9 +10,8 @@ import { useEffect, useState } from 'react';
  */
 export const useWalletBalance = () => {
   const { address: appKitAddress, isConnected: appKitConnected } = useAccount();
-  const { data: appKitBalance, isLoading: appKitBalanceLoading } = useBalance({
+  const { data: appKitBalance } = useBalance({
     address: appKitAddress,
-    enabled: appKitConnected && !!appKitAddress,
   });
   
   const walletKit = useWalletKitLink() as any;
@@ -48,25 +48,31 @@ export const useWalletBalance = () => {
   // Fetch Stacks balance
   useEffect(() => {
     const fetchStacksBalance = async () => {
-      if (stacksConnected && userData?.profile?.stxAddress?.mainnet) {
-        setIsLoading(true);
-        try {
-          const address = userData.profile.stxAddress.mainnet;
-          const response = await fetch(
-            `https://api.hiro.so/v2/accounts/${address}?proof=0`
-          );
-          if (response.ok) {
-            const data = await response.json();
-            const balance = (data.balance / 1000000).toFixed(6); // Convert microSTX to STX
-            setStacksBalance(balance);
-          }
-        } catch (error) {
-          console.error('Error fetching Stacks balance:', error);
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
+      if (!stacksConnected || !userData) {
         setStacksBalance(null);
+        return;
+      }
+
+      const address = getStacksAddress(userData);
+      if (!address) {
+        setStacksBalance(null);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        const response = await fetch(
+          `https://api.hiro.so/v2/accounts/${address}?proof=0`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const balance = (data.balance / 1000000).toFixed(6); // Convert microSTX to STX
+          setStacksBalance(balance);
+        }
+      } catch (error) {
+        console.error('Error fetching Stacks balance:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -77,10 +83,11 @@ export const useWalletBalance = () => {
     // AppKit balance (EVM chains)
     appKitBalance: appKitBalance ? {
       value: appKitBalance.value,
-      formatted: appKitBalance.formatted,
+      decimals: appKitBalance.decimals,
       symbol: appKitBalance.symbol,
+      formatted: String(Number(appKitBalance.value) / Math.pow(10, appKitBalance.decimals)),
     } : null,
-    appKitBalanceLoading,
+    appKitBalanceLoading: false,
     
     // WalletKit balance
     walletKitBalance,
@@ -89,7 +96,7 @@ export const useWalletBalance = () => {
     stacksBalance,
     
     // Aggregated
-    isLoading: isLoading || appKitBalanceLoading,
+    isLoading: isLoading,
     hasAnyBalance: !!(appKitBalance || walletKitBalance || stacksBalance),
   };
 };

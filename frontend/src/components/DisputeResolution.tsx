@@ -41,9 +41,10 @@ export const DisputeResolution = ({ escrowId }: DisputeResolutionProps) => {
             setDispute({ id, ...disputeData.value });
 
             // Load user's stake if connected
-            if (userData?.profile?.stxAddress?.mainnet) {
+            const userDataAny = userData as any;
+            if (userDataAny?.profile?.stxAddress?.mainnet) {
               try {
-                const stakeData = await getDisputeStakes(id, userData.profile.stxAddress.mainnet);
+                const stakeData = await getDisputeStakes(id, userDataAny.profile.stxAddress.mainnet);
                 if (stakeData?.value) {
                   setUserStake(stakeData.value);
                 }

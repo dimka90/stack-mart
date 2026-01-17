@@ -60,7 +60,7 @@ export const EVMPaymentButton = ({
         abi: [],
         functionName: 'transfer',
         value: parseEther(amount),
-      });
+      } as any);
     } catch (error) {
       console.error('AppKit payment error:', error);
       onError?.(error instanceof Error ? error.message : 'Payment failed');

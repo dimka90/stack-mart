@@ -205,10 +205,10 @@
 })
 
 (define-read-only (get-seller-reputation (seller principal))
-  (ok (default-to DEFAULT_REPUTATION (map-get? reputation { principal: seller }))))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation-seller { seller: seller }))))
 
 (define-read-only (get-buyer-reputation (buyer principal))
-  (ok (default-to DEFAULT_REPUTATION (map-get? reputation { principal: buyer }))))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation-buyer { buyer: buyer }))))
 
 ;; Verify NFT ownership using SIP-009 standard (get-owner function)
 ;; Note: In Clarity, contract-call? with variable principals works at runtime

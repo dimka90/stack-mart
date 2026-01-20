@@ -79,13 +79,23 @@
   , timeout-block: uint
   })
 
-;; Reputation tracking for sellers and buyers
-(define-map reputation
-  { principal: principal }
+;; Reputation system
+(define-map reputation-seller
+  { seller: principal }
   { successful-txs: uint
   , failed-txs: uint
   , rating-sum: uint
   , rating-count: uint
+  , total-volume: uint
+  })
+
+(define-map reputation-buyer
+  { buyer: principal }
+  { successful-txs: uint
+  , failed-txs: uint
+  , rating-sum: uint
+  , rating-count: uint
+  , total-volume: uint
   })
 
 ;; Delivery attestations

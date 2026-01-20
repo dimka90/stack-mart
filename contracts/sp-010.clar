@@ -54,3 +54,8 @@
     ;; Check for self-transfer
     (asserts! (not (is-eq sender recipient)) ERR-SELF-TRANSFER)
     (ok true)))
+;; Check if sender has sufficient balance for transfer
+(define-private (check-balance (amount uint) (sender principal))
+  (let ((sender-balance (default-to u0 (map-get? balances sender))))
+    (asserts! (>= sender-balance amount) ERR-INSUFFICIENT-BALANCE)
+    (ok sender-balance)))

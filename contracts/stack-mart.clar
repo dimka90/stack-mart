@@ -152,6 +152,7 @@
   , weight: uint
   })
 
+(define-map wishlists
   { user: principal }
   { listing-ids: (list 100 uint) })
 

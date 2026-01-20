@@ -64,18 +64,18 @@
   (let ((sender-balance (default-to u0 (map-get? balances sender))))
     (asserts! (>= sender-balance amount) ERR-INSUFFICIENT-BALANCE)
     (ok sender-balance)))
-;; Update balances atomically for transfer
+;; Update balances atomically for transfer (optimized)
 (define-private (update-balances (amount uint) (sender principal) (recipient principal) (sender-balance uint))
   (let ((new-sender-balance (- sender-balance amount))
-        (recipient-balance (default-to u0 (map-get? balances recipient)))
-        (new-recipient-balance (+ recipient-balance amount)))
-    ;; Update sender balance
+        (recipient-balance (default-to u0 (map-get? balances recipient))))
+    ;; Update sender balance (delete if zero to save storage)
     (if (is-eq new-sender-balance u0)
       (map-delete balances sender)
       (map-set balances sender new-sender-balance))
-    ;; Update recipient balance
-    (map-set balances recipient new-recipient-balance)
-    (ok true)))
+    ;; Update recipient balance (use safe-add for overflow protection)
+    (match (safe-add recipient-balance amount)
+      success (begin (map-set balances recipient success) (ok true))
+      error error)))
 ;; Main Transfer Function
 
 ;; Transfer tokens from sender to recipient

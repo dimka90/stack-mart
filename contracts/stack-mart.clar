@@ -39,6 +39,11 @@
 (define-constant ERR_PACK_NOT_FOUND (err u404))
 (define-constant ERR_INVALID_LISTING (err u400))
 (define-constant ERR_BUNDLE_EMPTY (err u400))
+(define-constant ERR_ALREADY_WISHLISTED (err u405))
+
+;; Marketplace fee constants
+(define-constant MARKETPLACE_FEE_BIPS u250) ;; 2.5% fee
+(define-constant FEE_RECIPIENT tx-sender) ;; Deployer is initial fee recipient
 
 ;; Bundle and pack constants
 (define-constant MAX_BUNDLE_SIZE u10)

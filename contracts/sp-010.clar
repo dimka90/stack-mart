@@ -144,3 +144,15 @@
 (define-private (safe-sub (a uint) (b uint))
   (asserts! (>= a b) (err u998)) ;; Underflow check
   (ok (- a b)))
+;; Additional Input Sanitization
+
+;; Validate principal is not contract address (additional security)
+(define-private (validate-principal-not-contract (who principal))
+  (asserts! (not (is-eq who (as-contract tx-sender))) ERR-INVALID-PRINCIPAL)
+  (ok true))
+
+;; Enhanced balance validation
+(define-private (validate-balance-query (who principal))
+  (begin
+    (asserts! (is-standard who) ERR-INVALID-PRINCIPAL)
+    (ok true)))

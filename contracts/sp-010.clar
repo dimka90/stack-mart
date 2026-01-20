@@ -1,5 +1,16 @@
 ;; SP-010 Token Contract
 ;; SIP-010 Compliant Fungible Token Implementation
+;; 
+;; This contract implements a fully compliant SIP-010 fungible token
+;; with comprehensive security features, event emission, and gas optimization.
+;; 
+;; Features:
+;; - Standard SIP-010 interface compliance
+;; - Safe arithmetic operations with overflow protection
+;; - Comprehensive input validation
+;; - Event emission for transfers and mints
+;; - Gas-optimized storage operations
+;; - Initial token distribution to deployer
 
 ;; Contract metadata
 (define-constant CONTRACT-NAME "SP-010")

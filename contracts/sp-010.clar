@@ -86,3 +86,14 @@
       (try! (update-balances amount sender recipient sender-balance))
       ;; Return success
       (ok true))))
+;; Event Emission Functions
+
+;; Emit transfer event following SIP-010 specification
+(define-private (emit-transfer-event (amount uint) (sender principal) (recipient principal))
+  (print {
+    type: "ft_transfer_event",
+    token-contract: (as-contract tx-sender),
+    amount: amount,
+    sender: sender,
+    recipient: recipient
+  }))

@@ -119,4 +119,6 @@
     (map-set balances recipient new-recipient-balance)
     ;; Update total supply
     (var-set total-supply new-supply)
+    ;; Emit mint event
+    (emit-mint-event amount recipient)
     (ok true)))

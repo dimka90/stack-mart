@@ -47,6 +47,7 @@ export const ListingCard = ({ listing, onBuy, onViewDetails }: ListingCardProps)
       <div className="card-body">
         <div style={{ marginBottom: '0.75rem' }}>
           <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>
+<button className="wishlist-btn" onClick={() => toggleWishlist(listing.id)}>❤️</button>
             Seller
 <button className="wishlist-btn" onClick={() => toggleWishlist(listing.id)}>❤️</button>
           </div>

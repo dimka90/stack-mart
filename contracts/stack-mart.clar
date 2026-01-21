@@ -1031,3 +1031,25 @@
     (map-set auctions { id: auction-id }
       (merge auction { highest-bid: amount, highest-bidder: (some tx-sender) }))
     (ok true)))
+
+(define-public (settle-auction (auction-id uint))
+  (let (
+    (auction (unwrap! (map-get? auctions { id: auction-id }) ERR_NOT_FOUND))
+    (listing-id (get listing-id auction))
+    (listing (unwrap! (map-get? listings { id: listing-id }) ERR_NOT_FOUND))
+  )
+    (asserts! (>= burn-block-height (get end-block auction)) ERR_AUCTION_NOT_ENDED)
+    (asserts! (not (get settled auction)) ERR_INVALID_STATE)
+    
+    (match (get highest-bidder auction)
+      winner (begin
+        ;; Transfer NFT to winner (simplified logic for script)
+        (map-delete listings { id: listing-id })
+        ;; Transfer funds to seller (minus fees logic would go here)
+        (try! (stx-transfer? (get highest-bid auction) (as-contract tx-sender) (get seller auction)))
+        true)
+      ;; No bids, auction just ends
+      true)
+    
+    (map-set auctions { id: auction-id } (merge auction { settled: true }))
+    (ok true)))

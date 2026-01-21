@@ -1,3 +1,5 @@
+import { ReputationBadge } from "./ReputationBadge";
+import { ReputationBadge } from "./ReputationBadge";
 import { formatAddress, formatSTX } from '../utils/validation';
 import { useContract } from '../hooks/useContract';
 import { useStacks } from '../hooks/useStacks';
@@ -43,11 +45,17 @@ export const ListingCard = ({ listing, onBuy, onViewDetails }: ListingCardProps)
       <div className="card-body">
         <div style={{ marginBottom: '0.75rem' }}>
           <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>
+<button className="wishlist-btn" onClick={() => toggleWishlist(listing.id)}>❤️</button>
             Seller
+<button className="wishlist-btn" onClick={() => toggleWishlist(listing.id)}>❤️</button>
           </div>
           <div style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
+<ReputationBadge vol={listing.sellerVolume} />
+<div className="seller-volume">Vol: {listing.sellerVolume || 0} STX</div>
             {formatAddress(listing.seller)}
           </div>
+<ReputationBadge vol={listing.sellerVolume} />
+<div className="seller-volume">Vol: {listing.sellerVolume || 0} STX</div>
         </div>
 
         <div style={{ marginBottom: '0.75rem' }}>

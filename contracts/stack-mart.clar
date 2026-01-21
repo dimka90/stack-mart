@@ -39,11 +39,13 @@
 (define-constant ERR_PACK_NOT_FOUND (err u404))
 (define-constant ERR_INVALID_LISTING (err u400))
 (define-constant ERR_BUNDLE_EMPTY (err u400))
+(define-data-var admin principal tx-sender)
+(define-data-var admin principal tx-sender)
 (define-constant ERR_ALREADY_WISHLISTED (err u405))
 
 ;; Marketplace fee constants
-(define-constant MARKETPLACE_FEE_BIPS u250) ;; 2.5% fee
-(define-constant FEE_RECIPIENT tx-sender) ;; Deployer is initial fee recipient
+(define-data-var marketplace-fee-bips uint u250) ;; 2.5% fee
+(define-data-var fee-recipient principal tx-sender) ;; Deployer is initial fee recipient
 
 ;; Bundle and pack constants
 (define-constant MAX_BUNDLE_SIZE u10)
@@ -158,10 +160,16 @@
 
 ;; Price history tracking
 (define-map price-history
+(define-public (set-admin (new-admin principal)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set admin new-admin))))
   { listing-id: uint }
+(define-public (set-admin (new-admin principal)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set admin new-admin))))
   { history: (list 10 { price: uint, block-height: uint }) })
+(define-public (set-marketplace-fee (new-fee uint)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set marketplace-fee-bips new-fee))))
+(define-public (set-fee-recipient (new-recipient principal)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set fee-recipient new-recipient))))
 
 (define-public (update-listing-price (id uint) (new-price uint))
+(define-public (set-marketplace-fee (new-fee uint)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set marketplace-fee-bips new-fee))))
+(define-public (set-fee-recipient (new-recipient principal)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set fee-recipient new-recipient))))
   (let (
     (listing (unwrap! (map-get? listings { id: id }) ERR_NOT_FOUND))
     (current-history (get history (default-to { history: (list) } (map-get? price-history { listing-id: id }))))
@@ -170,10 +178,12 @@
     (map-set listings { id: id } (merge listing { price: new-price }))
     (map-set price-history 
       { listing-id: id } 
+(define-read-only (is-wishlisted (user principal) (listing-id uint)) (let ((current-wishlist (get listing-ids (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))) (ok (is-some (index-of current-wishlist listing-id)))))
       { history: (unwrap! (as-max-len? (append current-history { price: new-price, block-height: burn-block-height }) u10) (err u500)) })
     (ok true)))
 
 (define-read-only (get-wishlist (user principal))
+(define-read-only (is-wishlisted (user principal) (listing-id uint)) (let ((current-wishlist (get listing-ids (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))) (ok (is-some (index-of current-wishlist listing-id)))))
   (ok (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))
 
 (define-read-only (get-price-history (listing-id uint))
@@ -313,12 +323,12 @@
             (nft-contract-opt (get nft-contract listing))
             (token-id-opt (get token-id listing))
             (royalty (/ (* price royalty-bips) BPS_DENOMINATOR))
-            (marketplace-fee (/ (* price MARKETPLACE_FEE_BIPS) BPS_DENOMINATOR))
+            (marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
             (seller-share (- (- price royalty) marketplace-fee))
            )
         (begin
           ;; Transfer marketplace fee
-          (try! (stx-transfer? marketplace-fee tx-sender FEE_RECIPIENT))
+          (try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
           
           ;; Transfer royalty if applicable
           ;; Transfer NFT if present (SIP-009 transfer function)
@@ -430,16 +440,22 @@
   (match (map-get? escrows { listing-id: listing-id })
     escrow
       (match (map-get? listings { id: listing-id })
+(marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
+(seller-share (- (- price royalty) marketplace-fee))
         listing
           (begin
             (asserts! (is-eq tx-sender (get buyer escrow)) ERR_NOT_BUYER)
             (asserts! (is-eq (get state escrow) "delivered") ERR_INVALID_STATE)
             ;; Release escrow payments
+(try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
+(marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
+(seller-share (- (- price royalty) marketplace-fee))
             (let (
                   (price (get amount escrow))
                   (royalty-bips (get royalty-bips listing))
                   (seller (get seller listing))
                   (royalty-recipient (get royalty-recipient listing))
+(try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
                   (royalty (/ (* price royalty-bips) BPS_DENOMINATOR))
                   (seller-share (- price royalty))
                  )
@@ -463,8 +479,8 @@
                       , rejection-reason: none })
                   true)
                 ;; Update reputation - successful transaction
-                (update-reputation seller true)
-                (update-reputation tx-sender true)
+                (update-reputation seller true price)
+                (update-reputation tx-sender true price)
                 ;; Update escrow state
                 (map-set escrows
                   { listing-id: listing-id }
@@ -599,6 +615,7 @@
                   , timeout-block: (get timeout-block escrow) })
                 (ok true))))
         ERR_NOT_FOUND)
+(total-volume: (if success (+ (get total-volume current-rep) amount) (get total-volume current-rep)))
     ERR_ESCROW_NOT_FOUND))
 
 
@@ -606,7 +623,8 @@
 
 
 ;; Helper function to update reputation (optimized)
-(define-private (update-reputation (principal principal) (success bool))
+(define-private (update-reputation (principal principal) (success bool) (amount uint)))
+(total-volume: (if success (+ (get total-volume current-rep) amount) (get total-volume current-rep)))
   (let ((current-rep (default-to DEFAULT_REPUTATION (map-get? reputation { principal: principal }))))
     (if success
       (map-set reputation
@@ -951,3 +969,7 @@
 (define-private (process-pack-purchases (listing-ids (list 20 uint)) (buyer principal))
   ;; Note: Simplified - in full implementation would process each listing
   true)
+(define-read-only (get-listings-by-seller (seller principal)) (ok "Logic for filtering map needed or iterate IDs"))
+(define-read-only (get-formatted-reputation (user principal)) (let ((rep (unwrap-rslt! (get-seller-reputation user) (err u0)))) (ok rep)))
+(define-read-only (get-listings-by-seller (seller principal)) (ok "Logic for filtering map needed or iterate IDs"))
+(define-read-only (get-formatted-reputation (user principal)) (let ((rep (unwrap-rslt! (get-seller-reputation user) (err u0)))) (ok rep)))

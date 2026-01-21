@@ -20,6 +20,7 @@
 
 (define-constant MAX_ROYALTY_BIPS u1000) ;; 10% in basis points
 (define-constant BPS_DENOMINATOR u10000)
+(define-data-var next-auction-id uint u1)
 (define-constant ERR_BAD_ROYALTY (err u400))
 (define-constant ERR_NOT_FOUND (err u404))
 (define-constant ERR_NOT_OWNER (err u403))
@@ -40,6 +41,10 @@
 (define-constant ERR_INVALID_LISTING (err u400))
 (define-constant ERR_BUNDLE_EMPTY (err u400))
 (define-data-var admin principal tx-sender)
+(define-constant ERR_AUCTION_ENDED (err u406))
+(define-constant ERR_AUCTION_NOT_ENDED (err u407))
+(define-constant ERR_BID_TOO_LOW (err u408))
+(define-constant MIN_BID_INCREMENT_BIPS u500) ;; 5%
 (define-data-var admin principal tx-sender)
 (define-constant ERR_ALREADY_WISHLISTED (err u405))
 

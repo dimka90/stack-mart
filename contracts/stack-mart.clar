@@ -990,3 +990,22 @@
   , end-block: uint
   , settled: bool
   })
+
+(define-public (create-auction (listing-id uint) (reserve-price uint) (duration uint))
+  (let (
+    (listing (unwrap! (map-get? listings { id: listing-id }) ERR_NOT_FOUND))
+    (auction-id (var-get next-auction-id))
+  )
+    (asserts! (is-eq (get seller listing) tx-sender) ERR_NOT_OWNER)
+    (map-set auctions
+      { id: auction-id }
+      { listing-id: listing-id
+      , seller: tx-sender
+      , reserve-price: reserve-price
+      , highest-bid: u0
+      , highest-bidder: none
+      , end-block: (+ burn-block-height duration)
+      , settled: false
+      })
+    (var-set next-auction-id (+ auction-id u1))
+    (ok auction-id)))

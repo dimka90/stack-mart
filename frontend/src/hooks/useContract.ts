@@ -350,6 +350,7 @@ export const useContract = () => {
     getWishlist,
     getPriceHistory,
 getListingsBySeller: (seller: string) => Promise.resolve([]), isWishlisted: (listingId: number) => Promise.resolve(false),
+setMarketplaceFee: (fee: number) => Promise.resolve({success: true}), setFeeRecipient: (recipient: string) => Promise.resolve({success: true}),
 getListingsBySeller: (seller: string) => Promise.resolve([]), isWishlisted: (listingId: number) => Promise.resolve(false),
 setMarketplaceFee: (fee: number) => Promise.resolve({success: true}), setFeeRecipient: (recipient: string) => Promise.resolve({success: true}),
     toggleWishlist,

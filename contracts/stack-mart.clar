@@ -178,6 +178,7 @@
     (ok true)))
 
 (define-read-only (get-wishlist (user principal))
+(define-read-only (is-wishlisted (user principal) (listing-id uint)) (let ((current-wishlist (get listing-ids (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))) (ok (is-some (index-of current-wishlist listing-id)))))
   (ok (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))
 
 (define-read-only (get-price-history (listing-id uint))

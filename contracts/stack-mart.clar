@@ -1010,3 +1010,24 @@
     (var-set next-auction-id (+ auction-id u1))
     (ok auction-id)))
 (define-read-only (get-auction (id uint)) (match (map-get? auctions { id: id }) auction (ok auction) ERR_NOT_FOUND))
+
+(define-public (place-bid (auction-id uint) (amount uint))
+  (let (
+    (auction (unwrap! (map-get? auctions { id: auction-id }) ERR_NOT_FOUND))
+    (highest-bid (get highest-bid auction))
+  )
+    (asserts! (< burn-block-height (get end-block auction)) ERR_AUCTION_ENDED)
+    (asserts! (>= amount (get reserve-price auction)) ERR_BID_TOO_LOW)
+    (asserts! (> amount (+ highest-bid (/ (* highest-bid MIN_BID_INCREMENT_BIPS) BPS_DENOMINATOR))) ERR_BID_TOO_LOW)
+    
+    ;; Refund previous bidder if exists
+    (match (get highest-bidder auction)
+      prev-bidder (try! (stx-transfer? highest-bid (as-contract tx-sender) prev-bidder))
+      true)
+    
+    ;; Escrow new bid
+    (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+    
+    (map-set auctions { id: auction-id }
+      (merge auction { highest-bid: amount, highest-bidder: (some tx-sender) }))
+    (ok true)))

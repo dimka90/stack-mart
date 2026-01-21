@@ -352,6 +352,7 @@ export const useContract = () => {
 getListingsBySeller: (seller: string) => Promise.resolve([]), isWishlisted: (listingId: number) => Promise.resolve(false),
 setMarketplaceFee: (fee: number) => Promise.resolve({success: true}), setFeeRecipient: (recipient: string) => Promise.resolve({success: true}),
 createAuction: (listingId: number, reservePrice: number, duration: number) => Promise.resolve({success: true}), placeBid: (auctionId: number, amount: number) => Promise.resolve({success: true}),
+settleAuction: (auctionId: number) => Promise.resolve({success: true}),
 getListingsBySeller: (seller: string) => Promise.resolve([]), isWishlisted: (listingId: number) => Promise.resolve(false),
 setMarketplaceFee: (fee: number) => Promise.resolve({success: true}), setFeeRecipient: (recipient: string) => Promise.resolve({success: true}),
     toggleWishlist,

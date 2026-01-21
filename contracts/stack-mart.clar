@@ -43,8 +43,8 @@
 (define-constant ERR_ALREADY_WISHLISTED (err u405))
 
 ;; Marketplace fee constants
-(define-constant MARKETPLACE_FEE_BIPS u250) ;; 2.5% fee
-(define-constant FEE_RECIPIENT tx-sender) ;; Deployer is initial fee recipient
+(define-data-var marketplace-fee-bips uint u250) ;; 2.5% fee
+(define-data-var fee-recipient principal tx-sender) ;; Deployer is initial fee recipient
 
 ;; Bundle and pack constants
 (define-constant MAX_BUNDLE_SIZE u10)
@@ -164,6 +164,8 @@
   { history: (list 10 { price: uint, block-height: uint }) })
 
 (define-public (update-listing-price (id uint) (new-price uint))
+(define-public (set-marketplace-fee (new-fee uint)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set marketplace-fee-bips new-fee))))
+(define-public (set-fee-recipient (new-recipient principal)) (begin (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) (ok (var-set fee-recipient new-recipient))))
   (let (
     (listing (unwrap! (map-get? listings { id: id }) ERR_NOT_FOUND))
     (current-history (get history (default-to { history: (list) } (map-get? price-history { listing-id: id }))))
@@ -315,12 +317,12 @@
             (nft-contract-opt (get nft-contract listing))
             (token-id-opt (get token-id listing))
             (royalty (/ (* price royalty-bips) BPS_DENOMINATOR))
-            (marketplace-fee (/ (* price MARKETPLACE_FEE_BIPS) BPS_DENOMINATOR))
+            (marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
             (seller-share (- (- price royalty) marketplace-fee))
            )
         (begin
           ;; Transfer marketplace fee
-          (try! (stx-transfer? marketplace-fee tx-sender FEE_RECIPIENT))
+          (try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
           
           ;; Transfer royalty if applicable
           ;; Transfer NFT if present (SIP-009 transfer function)

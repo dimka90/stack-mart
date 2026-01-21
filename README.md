@@ -168,3 +168,8 @@ The frontend is a React + TypeScript application using Vite.
 ## Recent Enhancements (Jan 2026)
 - Advanced Administrative Controls
 - Reputation Volume Tracking
+## Auction Rules
+- Minimum bid increment is 5%.
+- STX is escrowed in the contract upon bidding.
+- Previous bidders are automatically refunded when outbid.
+- Auctions must be settled manually after the end block is reached.

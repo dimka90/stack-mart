@@ -98,6 +98,7 @@ export const Dashboard = () => {
                                 </div>
                                 <div style={{ borderLeft: '1px solid var(--gray-200)', paddingLeft: '2rem' }}>
 <div className="stat-card"><h3>Total Volume</h3><p>{stats.totalVolume} STX</p></div>
+<div className="stat-card"><h3>Total Volume</h3><p>{stats.totalVolume} STX</p></div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>Total Volume</div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                                         {formatSTX(sellerRep['total-volume']?.value || 0)} STX

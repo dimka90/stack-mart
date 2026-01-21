@@ -470,8 +470,8 @@
                       , rejection-reason: none })
                   true)
                 ;; Update reputation - successful transaction
-                (update-reputation seller true)
-                (update-reputation tx-sender true)
+                (update-reputation seller true price)
+                (update-reputation tx-sender true price)
                 ;; Update escrow state
                 (map-set escrows
                   { listing-id: listing-id }
@@ -613,7 +613,8 @@
 
 
 ;; Helper function to update reputation (optimized)
-(define-private (update-reputation (principal principal) (success bool))
+(define-private (update-reputation (principal principal) (success bool) (amount uint)))
+(total-volume: (if success (+ (get total-volume current-rep) amount) (get total-volume current-rep)))
   (let ((current-rep (default-to DEFAULT_REPUTATION (map-get? reputation { principal: principal }))))
     (if success
       (map-set reputation

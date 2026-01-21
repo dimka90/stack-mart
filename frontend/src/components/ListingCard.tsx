@@ -52,6 +52,7 @@ export const ListingCard = ({ listing, onBuy, onViewDetails }: ListingCardProps)
           <div style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
             {formatAddress(listing.seller)}
           </div>
+<div className="seller-volume">Vol: {listing.sellerVolume || 0} STX</div>
         </div>
 
         <div style={{ marginBottom: '0.75rem' }}>

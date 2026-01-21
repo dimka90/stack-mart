@@ -154,6 +154,7 @@ export const CreateListing = () => {
           style={{ fontFamily: 'monospace' }}
         />
 <div className="form-group"><label className="checkbox-container"><input type="checkbox" /> Sell via Auction</label></div>
+<div className="form-group"><label>Reserve Price (STX)</label><input type="number" placeholder="10.0" /></div>
         <div className="form-help">Stacks address that will receive royalty payments</div>
       </div>
 

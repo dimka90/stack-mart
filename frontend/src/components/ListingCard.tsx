@@ -1,3 +1,4 @@
+import { ReputationBadge } from "./ReputationBadge";
 import { formatAddress, formatSTX } from '../utils/validation';
 import { useContract } from '../hooks/useContract';
 import { useStacks } from '../hooks/useStacks';
@@ -52,6 +53,7 @@ export const ListingCard = ({ listing, onBuy, onViewDetails }: ListingCardProps)
           <div style={{ fontFamily: 'monospace', fontSize: '0.875rem' }}>
             {formatAddress(listing.seller)}
           </div>
+<ReputationBadge vol={listing.sellerVolume} />
 <div className="seller-volume">Vol: {listing.sellerVolume || 0} STX</div>
         </div>
 

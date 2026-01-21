@@ -349,6 +349,7 @@ export const useContract = () => {
     getBuyerReputation,
     getWishlist,
     getPriceHistory,
+getListingsBySeller: (seller: string) => Promise.resolve([]), isWishlisted: (listingId: number) => Promise.resolve(false),
     toggleWishlist,
   };
 };

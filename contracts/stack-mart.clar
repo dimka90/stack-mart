@@ -959,3 +959,4 @@
 (define-private (process-pack-purchases (listing-ids (list 20 uint)) (buyer principal))
   ;; Note: Simplified - in full implementation would process each listing
   true)
+(define-read-only (get-listings-by-seller (seller principal)) (ok "Logic for filtering map needed or iterate IDs"))

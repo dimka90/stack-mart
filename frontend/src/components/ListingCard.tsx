@@ -1,3 +1,4 @@
+import { ReputationBadge } from "./ReputationBadge";
 import { formatAddress, formatSTX } from '../utils/validation';
 import { useContract } from '../hooks/useContract';
 import { useStacks } from '../hooks/useStacks';

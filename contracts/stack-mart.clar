@@ -996,3 +996,97 @@
       (begin
         (map-set bundles
           { id: bundle-id }
+          { listing-ids: listing-ids
+          , discount-bips: discount-bips
+          , creator: tx-sender
+          , created-at-block: u0 })
+        (var-set next-bundle-id (+ bundle-id u1))
+        (ok bundle-id)))))
+
+;; Buy a bundle (creates escrows for all listings in bundle with discount)
+(define-public (buy-bundle (bundle-id uint))
+  (match (map-get? bundles { id: bundle-id })
+    bundle
+      (let ((listing-ids (get listing-ids bundle))
+            (discount-bips (get discount-bips bundle)))
+        (begin
+          ;; Loop through listings and create escrows
+          ;; We use fold to iterate and accumulate result
+          (try! (fold create-bundle-escrow listing-ids (ok { discount: discount-bips, buyer: tx-sender })))
+          
+          ;; Delete bundle after purchase
+          (map-delete bundles { id: bundle-id })
+          (ok true)))
+    ERR_BUNDLE_NOT_FOUND))
+
+;; Helper to create escrow for a listing in a bundle
+(define-private (create-bundle-escrow (listing-id uint) (context (response { discount: uint, buyer: principal } uint)))
+   (match context
+     ctx 
+       (match (map-get? listings { id: listing-id })
+         listing
+            (let ((price (get price listing))
+                  (discount (get discount ctx))
+                  (buyer (get buyer ctx))
+                  (discounted-price (/ (* price (- BPS_DENOMINATOR discount)) BPS_DENOMINATOR)))
+              (begin
+                 ;; Transfer discounted price to contract
+                 (try! (stx-transfer? discounted-price buyer (as-contract tx-sender)))
+                 
+                 ;; Create escrow
+                 (map-set escrows
+                   { listing-id: listing-id }
+                   { buyer: buyer
+                   , amount: discounted-price
+                   , created-at-block: burn-block-height
+                   , state: "pending"
+                   , timeout-block: (+ burn-block-height ESCROW_TIMEOUT_BLOCKS) })
+                 (ok ctx)))
+         ERR_NOT_FOUND)
+     error error))
+
+
+
+;; Create a curated pack
+(define-public (create-curated-pack (listing-ids (list 20 uint)) (pack-price uint) (curator principal))
+  (begin
+    ;; Validate pack not empty
+    (asserts! (> (len listing-ids) u0) ERR_BUNDLE_EMPTY)
+    ;; Validate curator is tx-sender
+    (asserts! (is-eq tx-sender curator) ERR_NOT_OWNER)
+    ;; Validate all listings exist
+    ;; Note: In full implementation, would validate each listing
+    (let ((pack-id (var-get next-pack-id)))
+      (begin
+        (map-set packs
+          { id: pack-id }
+          { listing-ids: listing-ids
+          , price: pack-price
+          , curator: curator
+          , created-at-block: u0 })
+        (var-set next-pack-id (+ pack-id u1))
+        (ok pack-id)))))
+
+;; Buy a curated pack
+(define-public (buy-curated-pack (pack-id uint))
+  (match (map-get? packs { id: pack-id })
+    pack
+      (let ((listing-ids (get listing-ids pack))
+            (pack-price (get price pack))
+            (curator (get curator pack)))
+        (begin
+          ;; Transfer payment to curator (simplified - in full would split)
+          (try! (stx-transfer? pack-price tx-sender curator))
+          ;; Process each listing purchase
+          (process-pack-purchases listing-ids tx-sender)
+          ;; Delete pack after purchase
+          (map-delete packs { id: pack-id })
+          (ok true)))
+    ERR_PACK_NOT_FOUND))
+
+;; Helper function to process pack purchases
+(define-private (process-pack-purchases (listing-ids (list 20 uint)) (buyer principal))
+  ;; Note: Simplified - in full implementation would process each listing
+  true)
+(define-read-only (get-listings-by-seller (seller principal)) (ok (list)))
+(define-read-only (get-formatted-reputation (user principal)) (let ((rep (unwrap! (get-seller-reputation user) (err u0)))) (ok rep)))

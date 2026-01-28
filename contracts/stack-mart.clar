@@ -318,3 +318,49 @@
   , created-at-block: uint
   })
 
+(define-read-only (get-next-id)
+  (ok (var-get next-id)))
+
+(define-read-only (get-listing (id uint))
+  (match (map-get? listings { id: id })
+    listing (ok listing)
+    ERR_NOT_FOUND))
+
+;; get-listing-with-nft is an alias for get-listing (both return same data)
+(define-read-only (get-listing-with-nft (id uint))
+  (get-listing id))
+
+(define-read-only (get-escrow-status (listing-id uint))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow (ok escrow)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Shared default reputation structure
+(define-constant DEFAULT_REPUTATION {
+  successful-txs: u0
+, failed-txs: u0
+, rating-sum: u0
+, rating-count: u0
+})
+
+(define-read-only (get-seller-reputation (seller principal))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: seller }))))
+
+(define-read-only (get-buyer-reputation (buyer principal))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: buyer }))))
+
+;; Verify NFT ownership using SIP-009 standard (get-owner function)
+;; Note: In Clarity, contract-call? with variable principals works at runtime
+;; The trait is defined for documentation and type checking purposes
+(define-private (verify-nft-ownership (nft-contract-addr principal) (token-id uint) (owner principal))
+  (match (contract-call? nft-contract-addr get-owner token-id)
+    (ok nft-owner-opt)
+      (match nft-owner-opt
+        (some nft-owner)
+          (is-eq nft-owner owner)
+        none
+          false)
+    (err error-code)
+      false))
+
+;; Legacy function - kept for backward compatibility (no NFT)

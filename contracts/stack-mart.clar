@@ -713,3 +713,52 @@
         ERR_NOT_FOUND)
     ERR_ESCROW_NOT_FOUND))
 
+;; Helper function to update reputation (optimized)
+(define-private (update-reputation (principal principal) (success bool) (amount uint))
+  (let ((current-rep (default-to DEFAULT_REPUTATION (map-get? reputation { user: principal })))) ;; Fixed map key
+    (if success
+      (map-set reputation
+        { user: principal }
+        { successful-txs: (+ (get successful-txs current-rep) u1)
+        , failed-txs: (get failed-txs current-rep)
+        , rating-sum: (get rating-sum current-rep)
+        , rating-count: (get rating-count current-rep) })
+      (map-set reputation
+        { user: principal }
+        { successful-txs: (get successful-txs current-rep)
+        , failed-txs: (+ (get failed-txs current-rep) u1)
+        , rating-sum: (get rating-sum current-rep)
+        , rating-count: (get rating-count current-rep) }))))
+
+;; Helper function to record transaction history
+(define-private (record-transaction (principal principal) (listing-id uint) (counterparty principal) (amount uint) (completed bool))
+  (let ((current-index (default-to u0 (map-get? tx-index-counter { principal: principal }))))
+    (begin
+      (map-set transaction-history
+        { principal: principal
+        , tx-index: current-index }
+        { listing-id: listing-id
+        , counterparty: counterparty
+        , amount: amount
+        , completed: completed
+        , timestamp: u0 })
+      (map-set tx-index-counter
+        { principal: principal }
+        (+ current-index u1)))))
+
+;; Get transaction history for a principal (returns transaction by index)
+(define-read-only (get-transaction-history (principal principal) (index uint))
+  (match (map-get? transaction-history { principal: principal, tx-index: index })
+    tx (ok tx)
+    ERR_NOT_FOUND))
+
+(define-read-only (get-dispute (dispute-id uint))
+  (match (map-get? disputes { id: dispute-id })
+    dispute (ok dispute)
+    ERR_DISPUTE_NOT_FOUND))
+
+(define-read-only (get-dispute-stakes (dispute-id uint) (staker principal))
+  (match (map-get? dispute-stakes { dispute-id: dispute-id, staker: staker })
+    stake (ok stake)
+    ERR_NOT_FOUND))
+

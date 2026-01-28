@@ -42,11 +42,21 @@ export const useTransactionHistory = () => {
       updateLoadingState();
       try {
         // In production, use a block explorer API or indexer
-        // For now, this is a placeholder
-        await fetch(
-          `https://api.etherscan.io/api?module=account&action=txlist&address=${appKitAddress}&startblock=0&endblock=99999999&sort=desc&apikey=YourApiKeyToken`
-        );
-        // Note: This requires an API key and proper error handling
+        // For now, this is a placeholder - transactions will be fetched via indexer or block explorer
+        // Note: This requires an API key from environment variables and proper error handling
+        // For demo purposes, we'll use empty array
+        const apiKey = import.meta.env.VITE_ETHERSCAN_API_KEY;
+        if (apiKey) {
+          const response = await fetch(
+            `https://api.etherscan.io/api?module=account&action=txlist&address=${appKitAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${apiKey}`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            // Parse and set transactions if API returns data
+            // For now, keeping empty array as placeholder
+            // TODO: Parse data.result and map to Transaction[] format
+          }
+        }
         // For demo purposes, we'll use empty array
         setAppKitTransactions([]);
       } catch (error) {
@@ -62,7 +72,15 @@ export const useTransactionHistory = () => {
   }, [appKitConnected, appKitAddress]);
 
   // Fetch Stacks transactions
+  const lastTxAddressRef = useRef<string | null>(null);
+  const txFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
+    // Clear any pending fetch
+    if (txFetchTimeoutRef.current) {
+      clearTimeout(txFetchTimeoutRef.current);
+    }
+
     const fetchStacksTransactions = async () => {
       if (!stacksConnected || !userData) {
         setStacksTransactions([]);
@@ -107,6 +125,12 @@ export const useTransactionHistory = () => {
     };
 
     fetchStacksTransactions();
+
+    return () => {
+      if (txFetchTimeoutRef.current) {
+        clearTimeout(txFetchTimeoutRef.current);
+      }
+    };
   }, [stacksConnected, userData]);
 
   const allTransactions = [

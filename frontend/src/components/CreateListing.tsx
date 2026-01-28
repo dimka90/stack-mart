@@ -117,9 +117,8 @@ export const CreateListing = () => {
           onChange={(e) => setPrice(e.target.value)}
           required
           placeholder="0.00"
-<div className="fee-info">Note: marketplace fee of 2.5% applies to successful sales.</div>
-<div className="fee-info">Note: marketplace fee of 2.5% applies to successful sales.</div>
         />
+        <div className="fee-info">Note: marketplace fee of 2.5% applies to successful sales.</div>
         <div className="form-help">Enter the price in STX (e.g., 1.5 for 1.5 STX)</div>
       </div>
 

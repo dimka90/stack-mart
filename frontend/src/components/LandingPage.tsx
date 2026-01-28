@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { WalletButton } from './WalletButton';
 import { useStacks } from '../hooks/useStacks';
 import { useAppKit } from '@reown/appkit/react';
@@ -12,15 +12,28 @@ export const LandingPage = ({ onEnter }: LandingPageProps) => {
   const { isConnected, isAppKitConnected } = useStacks();
   const { address, isConnected: isAppKitAccountConnected } = useAccount();
 
-  // Auto-navigate to marketplace when wallet is connected
+  // Auto-navigate to marketplace when wallet is connected (only once per session)
   useEffect(() => {
     const walletConnected = isConnected || isAppKitConnected || isAppKitAccountConnected;
-    if (walletConnected) {
+    
+    // Check if we've already auto-navigated in this session
+    const hasAutoNavigated = sessionStorage.getItem('landingPageAutoNavigated') === 'true';
+    
+    // Only auto-navigate if:
+    // 1. Wallet is connected
+    // 2. We haven't already auto-navigated in this session
+    if (walletConnected && !hasAutoNavigated) {
+      sessionStorage.setItem('landingPageAutoNavigated', 'true');
       // Small delay to ensure connection is fully established
       const timer = setTimeout(() => {
         onEnter();
       }, 500);
       return () => clearTimeout(timer);
+    }
+    
+    // Reset the flag if wallet disconnects (so it can auto-navigate again if they reconnect)
+    if (!walletConnected && hasAutoNavigated) {
+      sessionStorage.removeItem('landingPageAutoNavigated');
     }
   }, [isConnected, isAppKitConnected, isAppKitAccountConnected, onEnter]);
   return (
@@ -230,12 +243,14 @@ export const LandingPage = ({ onEnter }: LandingPageProps) => {
               cursor: 'pointer'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-5px)';
-              e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+              e.currentTarget.style.transform = 'translateY(-8px)';
+              e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 102, 255, 0.15)';
+              e.currentTarget.style.borderColor = 'var(--primary-light)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+              e.currentTarget.style.borderColor = 'var(--gray-200)';
             }}
             >
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
@@ -286,17 +301,17 @@ export const LandingPage = ({ onEnter }: LandingPageProps) => {
                 border: 'none',
                 borderRadius: '12px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                transition: 'transform 0.2s, box-shadow 0.2s',
+                boxShadow: '0 4px 20px rgba(0, 102, 255, 0.3)',
+                transition: 'all 0.2s ease',
                 minWidth: '200px'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.05)';
-                e.currentTarget.style.boxShadow = '0 6px 30px rgba(0,0,0,0.3)';
+                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 102, 255, 0.4)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.2)';
+                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 102, 255, 0.3)';
               }}
             >
               🚀 Enter Marketplace

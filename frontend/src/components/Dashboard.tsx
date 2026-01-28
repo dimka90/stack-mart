@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStacks } from '../hooks/useStacks';
 import { useContract } from '../hooks/useContract';
 import { ListingCard } from './ListingCard';
@@ -59,7 +59,20 @@ export const Dashboard = () => {
         }
     };
 
+    const hasLoadedRef = useRef(false);
+    const lastPrincipalRef = useRef<string | null>(null);
+
     useEffect(() => {
+        const principal = getPrincipal();
+        // Only load if principal changed or hasn't loaded yet
+        if (principal && principal !== lastPrincipalRef.current) {
+            lastPrincipalRef.current = principal;
+            hasLoadedRef.current = false;
+        }
+        
+        if (!principal || hasLoadedRef.current) return;
+        
+        hasLoadedRef.current = true;
         loadData();
     }, [userSession]);
 
@@ -99,8 +112,6 @@ export const Dashboard = () => {
                                     </div>
                                 </div>
                                 <div style={{ borderLeft: '1px solid var(--gray-200)', paddingLeft: '2rem' }}>
-<div className="stat-card"><h3>Total Volume</h3><p>{stats.totalVolume} STX</p></div>
-<div className="stat-card"><h3>Total Volume</h3><p>{stats.totalVolume} STX</p></div>
                                     <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)' }}>Total Volume</div>
                                     <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--primary)' }}>
                                         {formatSTX(sellerRep['total-volume']?.value || 0)} STX
@@ -149,9 +160,7 @@ export const Dashboard = () => {
             <section>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <h2>My Active Listings</h2>
-{isAdmin && <section className="admin-panel"><h2>Admin Panel</h2><button>Set Fee</button></section>}
                     <button className="btn btn-secondary btn-sm" onClick={loadData}>🔄 Refresh</button>
-{isAdmin && <section className="admin-panel"><h2>Admin Panel</h2><button>Set Fee</button></section>}
                 </div>
 
                 {isLoading ? (

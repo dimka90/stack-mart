@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { WalletButton } from './components/WalletButton';
 import { LandingPage } from './components/LandingPage';
 import { CreateListing } from './components/CreateListing';
@@ -41,7 +41,7 @@ function App() {
     setShowLanding(true);
   };
 
-  const loadListings = async () => {
+  const loadListings = useCallback(async () => {
     setIsLoadingListings(true);
     setError(null);
     try {
@@ -72,18 +72,26 @@ function App() {
     } finally {
       setIsLoadingListings(false);
     }
-  };
+  }, [getAllListings]);
 
   // Load listings from contract - with error handling
+  const hasLoadedListingsRef = useRef(false);
+  
   useEffect(() => {
     // Only load listings if not on landing page
-    if (showLanding) return;
+    if (showLanding) {
+      hasLoadedListingsRef.current = false;
+      return;
+    }
+    
+    // Only load once per marketplace entry
+    if (hasLoadedListingsRef.current) return;
+    
+    hasLoadedListingsRef.current = true;
     
     // Use setTimeout to ensure component is mounted
     const timer = setTimeout(() => {
-      try {
-        loadListings();
-      } catch (err) {
+      loadListings().catch((err) => {
         console.error('Error in loadListings:', err);
         setError('Failed to initialize listings');
         // Set mock data as fallback
@@ -94,11 +102,10 @@ function App() {
           'royalty-bips': 500,
           'royalty-recipient': 'SP3J75H6FYTCJJW5R0CHVGWDFN8JPZP3DD4DPJRSP',
         }]);
-      }
+      });
     }, 100);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showLanding]);
+  }, [showLanding, loadListings]);
 
   const enterMarketplace = () => {
     setShowLanding(false);

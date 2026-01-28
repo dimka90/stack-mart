@@ -52,7 +52,7 @@ export const useChainhooks = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [disabled]);
 
   // Fetch events for a specific transaction
   const fetchEventByTxid = useCallback(async (txid: string) => {

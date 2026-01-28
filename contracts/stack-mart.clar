@@ -447,3 +447,269 @@
           (ok true)))
     ERR_NOT_FOUND))
 
+;; Create escrow for listing purchase
+;; Note: In Clarity, holding STX in contract requires the contract to receive funds first
+;; For now, we track escrow state. Actual STX transfer happens on release.
+(define-public (buy-listing-escrow (id uint))
+  (match (map-get? listings { id: id })
+    listing
+      (begin
+        ;; Check escrow doesn't already exist
+        (asserts! (is-none (map-get? escrows { listing-id: id })) ERR_INVALID_STATE)
+        (let (
+              (price (get price listing))
+             )
+          (begin
+            ;; Create escrow record
+            ;; Transfer STX to contract
+            (try! (stx-transfer? price tx-sender (as-contract tx-sender)))
+            
+            (map-set escrows
+              { listing-id: id }
+              { buyer: tx-sender
+              , amount: price
+              , created-at-block: burn-block-height
+              , state: "pending"
+              , timeout-block: (+ burn-block-height ESCROW_TIMEOUT_BLOCKS) })
+            (ok true))))
+    ERR_NOT_FOUND))
+
+;; Seller attests delivery with delivery hash
+(define-public (attest-delivery (listing-id uint) (delivery-hash (buff 32)))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+        listing
+          (begin
+            (asserts! (is-eq tx-sender (get seller listing)) ERR_NOT_SELLER)
+            (asserts! (is-eq (get state escrow) "pending") ERR_INVALID_STATE)
+            ;; Check attestation doesn't already exist
+            (asserts! (is-none (map-get? delivery-attestations { listing-id: listing-id })) ERR_ALREADY_ATTESTED)
+            ;; Transfer NFT if present
+            (let ((nft-contract-opt (get nft-contract listing))
+                  (token-id-opt (get token-id listing))
+                  (buyer (get buyer escrow)))
+              (begin
+                ;; Transfer NFT to buyer when seller attests delivery
+                (match nft-contract-opt
+                  nft-contract-principal
+                    (match token-id-opt
+                      token-id-value
+                        (match (contract-call? nft-contract-principal transfer token-id-value tx-sender buyer)
+                          (ok transfer-success)
+                            (asserts! transfer-success ERR_NFT_TRANSFER_FAILED)
+                          (err error-code)
+                            (err error-code))
+                      true)
+                  true)
+                ;; Create delivery attestation
+                (map-set delivery-attestations
+                  { listing-id: listing-id }
+                  { delivery-hash: delivery-hash
+                  , attested-at-block: u0
+                  , confirmed: false
+                  , rejected: false
+                  , rejection-reason: none })
+                ;; Update escrow state to delivered
+                (map-set escrows
+                  { listing-id: listing-id }
+                  { buyer: buyer
+                  , amount: (get amount escrow)
+                  , created-at-block: (get created-at-block escrow)
+                  , state: "delivered"
+                  , timeout-block: (get timeout-block escrow) })
+                (ok true))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Seller confirms delivery (legacy function - kept for backward compatibility)
+;; Note: New code should use attest-delivery with actual delivery hash
+(define-public (confirm-delivery (listing-id uint))
+  ;; For legacy compatibility, use zero buffer (32 bytes)
+  (let ((zero-hash 0x0000000000000000000000000000000000000000000000000000000000000000))
+    (try! (attest-delivery listing-id zero-hash))
+    (ok true)))
+
+;; Buyer confirms receipt and releases escrow
+(define-public (confirm-receipt (listing-id uint))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+(marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
+(seller-share (- (- price royalty) marketplace-fee))
+        listing
+          (begin
+            (asserts! (is-eq tx-sender (get buyer escrow)) ERR_NOT_BUYER)
+            (asserts! (is-eq (get state escrow) "delivered") ERR_INVALID_STATE)
+            ;; Release escrow payments
+(try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
+(marketplace-fee (/ (* price (var-get marketplace-fee-bips)) BPS_DENOMINATOR))
+(seller-share (- (- price royalty) marketplace-fee))
+            (let (
+                  (price (get amount escrow))
+                  (royalty-bips (get royalty-bips listing))
+                  (seller (get seller listing))
+                  (royalty-recipient (get royalty-recipient listing))
+(try! (stx-transfer? marketplace-fee tx-sender (var-get fee-recipient)))
+                  (royalty (/ (* price royalty-bips) BPS_DENOMINATOR))
+                  (seller-share (- price royalty))
+                 )
+              (begin
+                
+                ;; Transfer payments from escrow (contract holds funds)
+                (if (> royalty u0)
+                  (try! (as-contract (stx-transfer? royalty tx-sender royalty-recipient)))
+                  true)
+                (try! (as-contract (stx-transfer? seller-share tx-sender seller)))
+                ;; Update delivery attestation if exists
+                (match (map-get? delivery-attestations { listing-id: listing-id })
+                  attestation
+                    (map-set delivery-attestations
+                      { listing-id: listing-id }
+                      { delivery-hash: (get delivery-hash attestation)
+                      , attested-at-block: (get attested-at-block attestation)
+                      , confirmed: true
+                      , rejected: false
+                      , rejection-reason: none })
+                  true)
+                ;; Update reputation - successful transaction
+                (update-reputation seller true price)
+                (update-reputation tx-sender true price)
+                ;; Update escrow state
+                (map-set escrows
+                  { listing-id: listing-id }
+                  { buyer: (get buyer escrow)
+                  , amount: price
+                  , created-at-block: (get created-at-block escrow)
+                  , state: "confirmed"
+                  , timeout-block: (get timeout-block escrow) })
+                ;; Record transaction history
+                (record-transaction seller listing-id tx-sender price true)
+                (record-transaction tx-sender listing-id seller price true)
+                ;; Remove listing
+                (map-delete listings { id: listing-id })
+                (ok true))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Buyer confirms delivery received (alias for confirm-receipt)
+(define-public (confirm-delivery-received (listing-id uint))
+  (confirm-receipt listing-id))
+
+;; Buyer rejects delivery
+(define-public (reject-delivery (listing-id uint) (reason (string-ascii 200)))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+        listing
+          (begin
+            (asserts! (is-eq tx-sender (get buyer escrow)) ERR_NOT_BUYER)
+            (asserts! (is-eq (get state escrow) "delivered") ERR_INVALID_STATE)
+            ;; Update delivery attestation
+            (match (map-get? delivery-attestations { listing-id: listing-id })
+              attestation
+                (map-set delivery-attestations
+                  { listing-id: listing-id }
+                  { delivery-hash: (get delivery-hash attestation)
+                  , attested-at-block: (get attested-at-block attestation)
+                  , confirmed: false
+                  , rejected: true
+                  , rejection-reason: (some reason) })
+              true)
+            ;; Update reputation - failed transaction
+            (update-reputation (get seller listing) false)
+            (update-reputation tx-sender false)
+            ;; Record transaction history
+            (let ((price (get amount escrow)))
+              (begin
+                (record-transaction (get seller listing) listing-id tx-sender price false)
+                (record-transaction tx-sender listing-id (get seller listing) price false)
+                (ok true))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Release escrow after timeout or manual release
+(define-public (release-escrow (listing-id uint))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+        listing
+          (let (
+                (state (get state escrow))
+               )
+            (begin
+              ;; Can release if: state is "delivered" (buyer can release after delivery)
+              ;; Timeout check can be added later with proper block height function
+              (asserts! (is-eq state "delivered") ERR_TIMEOUT_NOT_REACHED)
+              ;; Only buyer or seller can release after timeout
+              (asserts! (or (is-eq tx-sender (get buyer escrow)) (is-eq tx-sender (get seller listing))) ERR_NOT_OWNER)
+              ;; If delivered and timeout, release to seller (seller fulfilled, buyer didn't confirm)
+              ;; If pending and timeout, refund to buyer
+              (let (
+                    (price (get amount escrow))
+                    (seller (get seller listing))
+                    (buyer-addr (get buyer escrow))
+                    (timeout-block (get timeout-block escrow))
+                   )
+                (begin
+                  (if (is-eq state "delivered")
+                    ;; Seller delivered, buyer didn't confirm - release to seller
+                    (let (
+                          (royalty-bips (get royalty-bips listing))
+                          (royalty-recipient (get royalty-recipient listing))
+                          (royalty (/ (* price royalty-bips) BPS_DENOMINATOR))
+                          (seller-share (- price royalty))
+                         )
+                      (begin
+                      (begin
+                        ;; Transfer from contract-held escrow
+                        (if (> royalty u0)
+                          (try! (as-contract (stx-transfer? royalty tx-sender royalty-recipient)))
+                          true)
+                        (try! (as-contract (stx-transfer? seller-share tx-sender seller))))
+                    ;; Pending and timeout - refund to buyer
+                    (try! (as-contract (stx-transfer? price tx-sender buyer-addr))))
+                  ;; Update escrow state
+                  (map-set escrows
+                    { listing-id: listing-id }
+                    { buyer: buyer-addr
+                    , amount: price
+                    , created-at-block: (get created-at-block escrow)
+                    , state: "released"
+                    , timeout-block: timeout-block })
+                  ;; Remove listing if released
+                  (if (is-eq state "delivered")
+                    (map-delete listings { id: listing-id })
+                    true)
+                  (ok true)))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Cancel escrow (only if pending and by buyer or seller)
+(define-public (cancel-escrow (listing-id uint))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+        listing
+          (begin
+            (asserts! (is-eq (get state escrow) "pending") ERR_INVALID_STATE)
+            (asserts! (or (is-eq tx-sender (get buyer escrow)) (is-eq tx-sender (get seller listing))) ERR_NOT_OWNER)
+            ;; Refund to buyer
+            (let ((price (get amount escrow))
+                  (buyer-addr (get buyer escrow)))
+              (begin
+                ;; Transfer from contract to buyer
+                (try! (as-contract (stx-transfer? price tx-sender buyer-addr)))
+                
+                ;; Update escrow state
+                (map-set escrows
+                  { listing-id: listing-id }
+                  { buyer: buyer-addr
+                  , amount: price
+                  , created-at-block: (get created-at-block escrow)
+                  , state: "cancelled"
+                  , timeout-block: (get timeout-block escrow) })
+                (ok true))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+

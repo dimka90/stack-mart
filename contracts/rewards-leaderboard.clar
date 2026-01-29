@@ -167,6 +167,53 @@
     )
 )
 
+;; Public: Apply Point Decay
+;; Encourages continuous activity by reducing points over time
+(define-public (apply-decay (user principal))
+    (let (
+        (current-stats (default-to 
+            {
+                total-points: u0,
+                contract-impact-points: u0,
+                library-usage-points: u0,
+                github-contrib-points: u0,
+                last-activity-block: block-height,
+                reputation-score: u0
+            }
+            (map-get? UserPoints user)
+        ))
+        (old-points (get total-points current-stats))
+        (new-points (/ (* old-points DECAY-FACTOR) u100))
+    )
+        ;; Only apply if significant time has passed (e.g., 1000 blocks)
+        (asserts! (> (- block-height (get last-activity-block current-stats)) u1000) (ok true))
+        
+        (map-set UserPoints user
+            (merge current-stats {
+                total-points: new-points,
+                last-activity-block: block-height
+            })
+        )
+        (ok true)
+    )
+)
+
+;; Read-only: Calculate Rank (Mock implementation for now)
+(define-read-only (get-user-rank (user principal))
+    (let (
+        (stats (get-user-stats user))
+        (global (get-global-stats))
+    )
+        (match stats
+            user-stats (ok {
+                rank: u1, ;; Future: iterate or use off-chain index
+                percentile: (/ (* (get total-points user-stats) u100) (if (> (get top-score global) u0) (get top-score global) u1))
+            })
+            (err ERR-USER-NOT-FOUND)
+        )
+    )
+)
+
 ;; Internal: Update Global Accumulators
 (define-private (update-global-stats (new-points uint))
     (let (

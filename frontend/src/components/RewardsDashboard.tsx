@@ -26,6 +26,55 @@ const RewardStat: React.FC<RewardStatProps> = ({ label, value, icon, trend }) =>
 );
 
 export const RewardsDashboard: React.FC = () => {
+    const [stats, setStats] = React.useState({
+        totalPoints: 0,
+        impact: 0,
+        libraryUsage: 0,
+        github: 0,
+        rank: 0,
+        history: [] as any[]
+    });
+
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        // Simulated data fetching from Stacks chain
+        const fetchRewardsData = async () => {
+            setIsLoading(true);
+            try {
+                // Mocking contract call response
+                setTimeout(() => {
+                    setStats({
+                        totalPoints: 24500,
+                        impact: 1200,
+                        libraryUsage: 850,
+                        github: 5000,
+                        rank: 42,
+                        history: [
+                            { date: '2026-01-20', activity: 'Contract Deployment', points: 500 },
+                            { date: '2026-01-22', activity: 'GitHub PR Merged', points: 2500 },
+                            { date: '2026-01-25', activity: 'Library Integration', points: 250 },
+                        ]
+                    });
+                    setIsLoading(false);
+                }, 1500);
+            } catch (error) {
+                console.error("Failed to fetch rewards:", error);
+                setIsLoading(false);
+            }
+        };
+
+        fetchRewardsData();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-[#0a0a0b] text-white p-8">
             <div className="max-w-7xl mx-auto">
@@ -42,23 +91,23 @@ export const RewardsDashboard: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
                     <RewardStat
                         label="Total Points"
-                        value="24,500"
+                        value={stats.totalPoints.toLocaleString()}
                         icon="✨"
                         trend="+12% this week"
                     />
                     <RewardStat
                         label="Contract Impact"
-                        value="1,200"
+                        value={stats.impact.toLocaleString()}
                         icon="📜"
                     />
                     <RewardStat
                         label="Library Usage"
-                        value="850"
+                        value={stats.libraryUsage.toLocaleString()}
                         icon="🛠️"
                     />
                     <RewardStat
                         label="GitHub Contribs"
-                        value="5,000"
+                        value={stats.github.toLocaleString()}
                         icon="🐙"
                         trend="+2 PRs"
                     />

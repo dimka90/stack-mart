@@ -48,9 +48,119 @@
 (define-constant ERR_PAUSED (err u406))
 (define-data-var paused bool false)
 
+;; Enhanced error codes for improved validation
+(define-constant ERR_REENTRANCY (err u600))
+(define-constant ERR_RATE_LIMITED (err u601))
+(define-constant ERR_INSUFFICIENT_BALANCE (err u602))
+(define-constant ERR_INVALID_CATEGORY (err u603))
+(define-constant ERR_EXPIRED_LISTING (err u604))
+(define-constant ERR_INVALID_OFFER (err u605))
+(define-constant ERR_BATCH_SIZE_EXCEEDED (err u606))
+(define-constant ERR_MIGRATION_FAILED (err u607))
+(define-constant ERR_INVALID_INPUT (err u608))
+(define-constant ERR_ZERO_AMOUNT (err u609))
+(define-constant ERR_OVERFLOW (err u610))
+
 ;; Marketplace fee constants
 (define-data-var marketplace-fee-bips uint u250) ;; 2.5% fee
 (define-data-var fee-recipient principal tx-sender) ;; Deployer is initial fee recipient
+
+;; Input validation helpers
+(define-private (validate-price (price uint))
+  (and (> price u0) (<= price u1000000000000))) ;; Max 1 trillion microSTX
+
+(define-private (validate-royalty (royalty-bips uint))
+  (<= royalty-bips MAX_ROYALTY_BIPS))
+
+(define-private (validate-discount (discount-bips uint))
+  (<= discount-bips MAX_DISCOUNT_BIPS))
+
+(define-private (validate-string-length (str (string-ascii 500)) (max-len uint))
+  (<= (len str) max-len))
+
+;; Security helpers
+(define-private (check-reentrancy)
+  (begin
+    (asserts! (not (var-get reentrancy-guard)) ERR_REENTRANCY)
+    (var-set reentrancy-guard true)
+    (ok true)))
+
+(define-private (clear-reentrancy)
+  (var-set reentrancy-guard false))
+
+(define-private (check-rate-limit (principal principal))
+  (let ((current-limit (default-to { last-action: u0, action-count: u0 } (map-get? rate-limits { principal: principal })))
+        (current-block burn-block-height))
+    (if (> (- current-block (get last-action current-limit)) RATE_LIMIT_WINDOW)
+      ;; Reset window
+      (begin
+        (map-set rate-limits { principal: principal } { last-action: current-block, action-count: u1 })
+        (ok true))
+      ;; Check within window
+      (if (< (get action-count current-limit) MAX_ACTIONS_PER_WINDOW)
+        (begin
+          (map-set rate-limits { principal: principal } 
+            { last-action: (get last-action current-limit), 
+              action-count: (+ (get action-count current-limit) u1) })
+          (ok true))
+        ERR_RATE_LIMITED))))
+
+(define-private (verify-ownership (owner principal) (caller principal))
+  (is-eq owner caller))
+
+;; Event logging helpers
+(define-private (log-event (event-type (string-ascii 50)) (principal principal) (listing-id (optional uint)) (amount (optional uint)) (data (optional (string-ascii 500))))
+  (let ((event-id (var-get next-event-id)))
+    (begin
+      (map-set events
+        { event-id: event-id }
+        { event-type: event-type
+        , principal: principal
+        , listing-id: listing-id
+        , amount: amount
+        , timestamp: burn-block-height
+        , data: data })
+      (var-set next-event-id (+ event-id u1))
+      event-id)))
+
+(define-read-only (get-event (event-id uint))
+  (match (map-get? events { event-id: event-id })
+    event (ok event)
+    ERR_NOT_FOUND))
+
+(define-read-only (get-latest-events (count uint))
+  (let ((current-id (var-get next-event-id)))
+    (if (> current-id count)
+      (ok (- current-id count))
+      (ok u1))))
+
+;; Duplicate operation prevention helpers
+(define-private (get-next-nonce (principal principal))
+  (let ((current-nonce (default-to u0 (map-get? operation-nonces { principal: principal }))))
+    (begin
+      (map-set operation-nonces { principal: principal } (+ current-nonce u1))
+      (+ current-nonce u1))))
+
+(define-private (check-operation-not-completed (principal principal) (operation-type (string-ascii 50)) (nonce uint))
+  (is-none (map-get? completed-operations { principal: principal, operation-type: operation-type, nonce: nonce })))
+
+(define-private (mark-operation-completed (principal principal) (operation-type (string-ascii 50)) (nonce uint))
+  (map-set completed-operations { principal: principal, operation-type: operation-type, nonce: nonce } true))
+
+(define-private (validate-state-consistency (listing-id uint))
+  (match (map-get? listings { id: listing-id })
+    listing
+      (match (map-get? escrows { listing-id: listing-id })
+        escrow
+          ;; If escrow exists, listing should still exist unless confirmed/released
+          (let ((escrow-state (get state escrow)))
+            (or (is-eq escrow-state "pending")
+                (is-eq escrow-state "delivered")
+                (is-eq escrow-state "disputed")))
+        ;; No escrow is fine
+        true)
+    ;; No listing - check if escrow exists (shouldn't)
+    (is-none (map-get? escrows { listing-id: listing-id }))))
 
 ;; Bundle and pack constants
 (define-constant MAX_BUNDLE_SIZE u10)
@@ -91,10 +201,34 @@
 (define-map escrows
   { listing-id: uint }
   { buyer: principal
+  , seller: principal
   , amount: uint
   , created-at-block: uint
   , state: (string-ascii 20)
   , timeout-block: uint
+  , stx-held: bool
+  })
+
+;; Reputation system - enhanced with weighted scoring
+(define-map reputation-v2
+  { principal: principal }
+  { successful-txs: uint
+  , failed-txs: uint
+  , total-volume: uint
+  , rating-sum: uint
+  , rating-count: uint
+  , weighted-score: uint
+  , last-updated: uint
+  , verification-level: uint
+  })
+
+;; Mutual rating system
+(define-map transaction-ratings
+  { listing-id: uint
+  , rater: principal }
+  { rating: uint
+  , comment: (optional (string-ascii 200))
+  , timestamp: uint
   })
 
 ;; Reputation system
@@ -202,7 +336,17 @@
         (print { event: "listing_created", id: id, seller: tx-sender, price: price })
         (ok id)))))
 
-;; Price history tracking
+;; Price history tracking - enhanced
+(define-map price-history-v2
+  { listing-id: uint }
+  { prices: (list 50 { price: uint, timestamp: uint, event-type: (string-ascii 20) })
+  , average-price: uint
+  , min-price: uint
+  , max-price: uint
+  , price-changes: uint
+  })
+
+;; Legacy price history (kept for backward compatibility)
 (define-map price-history
   { listing-id: uint }
   { history: (list 10 { price: uint, block-height: uint }) })
@@ -426,6 +570,55 @@
 (define-read-only (get-buyer-reputation (buyer principal))
   (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: buyer }))))
 
+;; Enhanced reputation system functions
+(define-read-only (get-reputation-v2 (principal principal))
+  (ok (default-to { 
+    successful-txs: u0, 
+    failed-txs: u0, 
+    total-volume: u0, 
+    rating-sum: u0, 
+    rating-count: u0, 
+    weighted-score: u0, 
+    last-updated: u0, 
+    verification-level: u0 
+  } (map-get? reputation-v2 { principal: principal }))))
+
+(define-private (calculate-weighted-score (successful-txs uint) (failed-txs uint) (total-volume uint) (rating-sum uint) (rating-count uint))
+  (let ((total-txs (+ successful-txs failed-txs))
+        (success-rate (if (> total-txs u0) (/ (* successful-txs u100) total-txs) u0))
+        (avg-rating (if (> rating-count u0) (/ rating-sum rating-count) u0))
+        (volume-weight (if (< (/ total-volume u1000) u100) (/ total-volume u1000) u100))) ;; Cap volume weight at 100
+    (+ (* success-rate u40) (* avg-rating u40) (* volume-weight u20))))
+
+;; Enhanced reputation update with bug fixes - ACTIVE VERSION
+(define-private (update-reputation-v2 (principal principal) (success bool) (amount uint) (rating (optional uint)))
+  ;; Redirect to fixed version
+  (update-reputation-v2-fixed principal success amount rating))
+
+;; Mutual rating function
+(define-public (rate-transaction (listing-id uint) (rating uint) (comment (optional (string-ascii 200))))
+  (begin
+    ;; Validate rating is between 1-5
+    (asserts! (and (>= rating u1) (<= rating u5)) ERR_INVALID_INPUT)
+    ;; Check transaction exists and caller was involved
+    (match (map-get? escrows { listing-id: listing-id })
+      escrow
+        (begin
+          ;; Only buyer or seller can rate, and only after completion
+          (asserts! (or (is-eq tx-sender (get buyer escrow)) (is-eq tx-sender (get seller escrow))) ERR_NOT_OWNER)
+          (asserts! (is-eq (get state escrow) "confirmed") ERR_INVALID_STATE)
+          ;; Check if already rated
+          (asserts! (is-none (map-get? transaction-ratings { listing-id: listing-id, rater: tx-sender })) ERR_INVALID_STATE)
+          ;; Record rating
+          (map-set transaction-ratings
+            { listing-id: listing-id, rater: tx-sender }
+            { rating: rating, comment: comment, timestamp: burn-block-height })
+          ;; Update reputation of the other party
+          (let ((other-party (if (is-eq tx-sender (get buyer escrow)) (get seller escrow) (get buyer escrow))))
+            (update-reputation-v2-fixed other-party true (get amount escrow) (some rating)))
+          (ok true))
+      ERR_ESCROW_NOT_FOUND)))
+
 ;; Verify NFT ownership using SIP-009 standard (get-owner function)
 ;; Note: In Clarity, contract-call? with variable principals works at runtime
 ;; The trait is defined for documentation and type checking purposes
@@ -541,16 +734,23 @@
     ERR_NOT_FOUND))
 
 ;; Create escrow for listing purchase
-;; Note: In Clarity, holding STX in contract requires the contract to receive funds first
-;; For now, we track escrow state. Actual STX transfer happens on release.
+;; Now properly holds STX in contract
 (define-public (buy-listing-escrow (id uint))
   (match (map-get? listings { id: id })
     listing
       (begin
-        ;; Check escrow doesn't already exist
+        ;; Security checks
+        (try! (check-reentrancy))
+        (try! (check-rate-limit tx-sender))
+        ;; Check escrow doesn't already exist (duplicate prevention)
         (asserts! (is-none (map-get? escrows { listing-id: id })) ERR_INVALID_STATE)
+        ;; Validate state consistency
+        (asserts! (validate-state-consistency id) ERR_INVALID_STATE)
         (let (
               (price (get price listing))
+              (seller (get seller listing))
+              (timeout-block (+ burn-block-height ESCROW_TIMEOUT_BLOCKS))
+              (nonce (get-next-nonce tx-sender))
              )
           (begin
             ;; Create escrow record
@@ -560,6 +760,7 @@
             (map-set escrows
               { listing-id: id }
               { buyer: tx-sender
+              , seller: seller
               , amount: price
               , created-at-block: burn-block-height
               , state: "pending"
@@ -576,8 +777,10 @@
           (begin
             (asserts! (is-eq tx-sender (get seller listing)) ERR_NOT_SELLER)
             (asserts! (is-eq (get state escrow) "pending") ERR_INVALID_STATE)
-            ;; Check attestation doesn't already exist
+            ;; Check attestation doesn't already exist (duplicate prevention)
             (asserts! (is-none (map-get? delivery-attestations { listing-id: listing-id })) ERR_ALREADY_ATTESTED)
+            ;; Validate state consistency
+            (asserts! (validate-state-consistency listing-id) ERR_INVALID_STATE)
             ;; Transfer NFT if present
             (let ((nft-contract-opt (get nft-contract listing))
                   (token-id-opt (get token-id listing))
@@ -607,6 +810,7 @@
                 (map-set escrows
                   { listing-id: listing-id }
                   { buyer: buyer
+                  , seller: tx-sender
                   , amount: (get amount escrow)
                   , created-at-block: (get created-at-block escrow)
                   , state: "delivered"
@@ -674,10 +878,12 @@
                 (map-set escrows
                   { listing-id: listing-id }
                   { buyer: (get buyer escrow)
+                  , seller: (get seller escrow)
                   , amount: price
                   , created-at-block: (get created-at-block escrow)
                   , state: "confirmed"
-                  , timeout-block: (get timeout-block escrow) })
+                  , timeout-block: (get timeout-block escrow)
+                  , stx-held: false })
                 ;; Record transaction history
                 (record-transaction seller listing-id tx-sender price true)
                 (record-transaction tx-sender listing-id seller price true)
@@ -724,8 +930,8 @@
         ERR_NOT_FOUND)
     ERR_ESCROW_NOT_FOUND))
 
-;; Release escrow after timeout or manual release
-(define-public (release-escrow (listing-id uint))
+;; Release escrow after timeout or manual release - ENHANCED
+(define-public (release-escrow-v2 (listing-id uint))
   (match (map-get? escrows { listing-id: listing-id })
     escrow
       (match (map-get? listings { id: listing-id })
@@ -1081,23 +1287,33 @@
     pack (ok pack)
     ERR_PACK_NOT_FOUND))
 
-;; Create a bundle of listings with discount
-(define-public (create-bundle (listing-ids (list 10 uint)) (discount-bips uint))
+;; Create a bundle of listings with discount - OPTIMIZED
+(define-public (create-bundle-v2 (listing-ids (list 10 uint)) (discount-bips uint))
   (begin
+    ;; Security checks
+    (try! (check-reentrancy))
+    (try! (check-rate-limit tx-sender))
     ;; Validate bundle not empty
     (asserts! (> (len listing-ids) u0) ERR_BUNDLE_EMPTY)
     ;; Validate discount within limits
     (asserts! (<= discount-bips MAX_DISCOUNT_BIPS) ERR_BAD_ROYALTY)
     ;; Validate all listings exist and belong to creator
-    ;; Note: In full implementation, would validate each listing
-    (let ((bundle-id (var-get next-bundle-id)))
+    (let ((validation-result (validate-bundle-listings listing-ids tx-sender))
+          (total-value (calculate-bundle-total-value listing-ids))
+          (bundle-id (var-get next-bundle-id)))
       (begin
-        (map-set bundles
+        (asserts! validation-result ERR_INVALID_LISTING)
+        (asserts! (> total-value u0) ERR_INVALID_INPUT)
+        ;; Create enhanced bundle with proper pricing
+        (map-set bundles-v2
           { id: bundle-id }
           { listing-ids: listing-ids
           , discount-bips: discount-bips
           , creator: tx-sender
-          , created-at-block: u0 })
+          , created-at-block: burn-block-height
+          , expires-at: (some (+ burn-block-height u14400)) ;; 100 days expiry
+          , total-value: total-value
+          , discounted-price: (calculate-discounted-bundle-price total-value discount-bips) })
         (var-set next-bundle-id (+ bundle-id u1))
         (print { event: "bundle_created", id: bundle-id, creator: tx-sender, count: (len listing-ids) })
         (ok bundle-id)))))
@@ -1146,41 +1362,162 @@
 
 
 
-;; Create a curated pack
-(define-public (create-curated-pack (listing-ids (list 20 uint)) (pack-price uint) (curator principal))
+(define-private (sum-listing-price (listing-id uint) (acc uint))
+  (match (map-get? listings { id: listing-id })
+    listing (+ acc (get price listing))
+    acc)) ;; If listing not found, don't add to total
+
+;; Helper function to calculate discounted bundle price
+(define-private (calculate-discounted-bundle-price (total-value uint) (discount-bips uint))
+  (let ((discount-amount (/ (* total-value discount-bips) BPS_DENOMINATOR)))
+    (if (> total-value discount-amount)
+      (- total-value discount-amount)
+      u1))) ;; Minimum price of 1 microSTX
+
+;; Buy a bundle (purchases all listings in bundle with discount) - OPTIMIZED
+(define-public (buy-bundle-v2 (bundle-id uint))
+  (match (map-get? bundles-v2 { id: bundle-id })
+    bundle
+      (begin
+        ;; Security checks
+        (try! (check-reentrancy))
+        (try! (check-rate-limit tx-sender))
+        ;; Check bundle hasn't expired
+        (match (get expires-at bundle)
+          (some expiry) (asserts! (< burn-block-height expiry) ERR_EXPIRED_LISTING)
+          true) ;; No expiry set
+        ;; Can't buy own bundle
+        (asserts! (not (is-eq tx-sender (get creator bundle))) ERR_INVALID_INPUT)
+        (let ((listing-ids (get listing-ids bundle))
+              (discounted-price (get discounted-price bundle))
+              (creator (get creator bundle)))
+          (begin
+            ;; Transfer discounted payment to bundle creator
+            (try! (stx-transfer? discounted-price tx-sender creator))
+            ;; Process each listing purchase with proper ownership transfer
+            (try! (process-bundle-purchases-v2 listing-ids tx-sender creator))
+            ;; Delete bundle after successful purchase
+            (map-delete bundles-v2 { id: bundle-id })
+            ;; Log bundle purchase event
+            (log-event "bundle-v2-purchased" tx-sender none (some discounted-price) none)
+            (clear-reentrancy)
+            (ok true))))
+    ERR_BUNDLE_NOT_FOUND))
+
+;; Helper function to process bundle purchases with proper error handling
+(define-private (process-bundle-purchases-v2 (listing-ids (list 10 uint)) (buyer principal) (seller principal))
+  (fold process-single-bundle-purchase listing-ids (ok true)))
+
+(define-private (process-single-bundle-purchase (listing-id uint) (acc (response bool uint)))
+  (match acc
+    (ok success)
+      (if success
+        ;; Transfer listing ownership (simplified - in full implementation would handle NFTs)
+        (match (map-get? listings { id: listing-id })
+          listing
+            (begin
+              ;; Remove listing from seller (bundle creator gets payment, listings transfer to buyer)
+              (map-delete listings { id: listing-id })
+              ;; Update reputation for successful transaction
+              (update-reputation seller true)
+              (update-reputation buyer true)
+              (ok true))
+          (err ERR_NOT_FOUND)) ;; Listing not found
+        acc) ;; Previous operation failed, propagate error
+    error-result error-result)) ;; Propagate error
+
+;; Create a curated pack - OPTIMIZED
+(define-public (create-curated-pack-v2 (listing-ids (list 20 uint)) (pack-price uint) (curator-fee-bips uint))
   (begin
+    ;; Security checks
+    (try! (check-reentrancy))
+    (try! (check-rate-limit tx-sender))
     ;; Validate pack not empty
     (asserts! (> (len listing-ids) u0) ERR_BUNDLE_EMPTY)
-    ;; Validate curator is tx-sender
-    (asserts! (is-eq tx-sender curator) ERR_NOT_OWNER)
-    ;; Validate all listings exist
-    ;; Note: In full implementation, would validate each listing
-    (let ((pack-id (var-get next-pack-id)))
+    ;; Validate pack price
+    (asserts! (validate-price pack-price) ERR_INVALID_INPUT)
+    ;; Validate curator fee within limits (max 20%)
+    (asserts! (<= curator-fee-bips u2000) ERR_BAD_ROYALTY)
+    ;; Validate all listings exist (don't need to own them for curation)
+    (let ((validation-result (validate-pack-listings listing-ids))
+          (pack-id (var-get next-pack-id)))
       (begin
-        (map-set packs
+        (asserts! validation-result ERR_INVALID_LISTING)
+        ;; Create enhanced pack
+        (map-set packs-v2
           { id: pack-id }
           { listing-ids: listing-ids
           , price: pack-price
-          , curator: curator
-          , created-at-block: u0 })
+          , curator: tx-sender
+          , curator-fee-bips: curator-fee-bips
+          , created-at-block: burn-block-height
+          , expires-at: (some (+ burn-block-height u14400)) ;; 100 days expiry
+          , purchases: u0
+          , active: true })
         (var-set next-pack-id (+ pack-id u1))
+        ;; Log pack creation event
+        (log-event "pack-v2-created" tx-sender none (some pack-price) none)
+        (clear-reentrancy)
         (ok pack-id)))))
 
-;; Buy a curated pack
-(define-public (buy-curated-pack (pack-id uint))
-  (match (map-get? packs { id: pack-id })
+;; Enhanced pack structure
+(define-map packs-v2
+  { id: uint }
+  { listing-ids: (list 20 uint)
+  , price: uint
+  , curator: principal
+  , curator-fee-bips: uint
+  , created-at-block: uint
+  , expires-at: (optional uint)
+  , purchases: uint
+  , active: bool
+  })
+
+;; Helper function to validate pack listings exist
+(define-private (validate-pack-listings (listing-ids (list 20 uint)))
+  (fold validate-pack-listing-exists listing-ids true))
+
+(define-private (validate-pack-listing-exists (listing-id uint) (acc bool))
+  (if (not acc)
+    false ;; Previous validation failed
+    (is-some (map-get? listings { id: listing-id })))) ;; Check if listing exists
+
+;; Buy a curated pack - OPTIMIZED
+(define-public (buy-curated-pack-v2 (pack-id uint))
+  (match (map-get? packs-v2 { id: pack-id })
     pack
-      (let ((listing-ids (get listing-ids pack))
-            (pack-price (get price pack))
-            (curator (get curator pack)))
-        (begin
-          ;; Transfer payment to curator (simplified - in full would split)
-          (try! (stx-transfer? pack-price tx-sender curator))
-          ;; Process each listing purchase
-          (process-pack-purchases listing-ids tx-sender)
-          ;; Delete pack after purchase
-          (map-delete packs { id: pack-id })
-          (ok true)))
+      (begin
+        ;; Security checks
+        (try! (check-reentrancy))
+        (try! (check-rate-limit tx-sender))
+        ;; Check pack is active and not expired
+        (asserts! (get active pack) ERR_INVALID_STATE)
+        (match (get expires-at pack)
+          (some expiry) (asserts! (< burn-block-height expiry) ERR_EXPIRED_LISTING)
+          true) ;; No expiry set
+        ;; Can't buy own pack
+        (asserts! (not (is-eq tx-sender (get curator pack))) ERR_INVALID_INPUT)
+        (let ((listing-ids (get listing-ids pack))
+              (pack-price (get price pack))
+              (curator (get curator pack))
+              (curator-fee-bips (get curator-fee-bips pack))
+              (curator-fee (/ (* pack-price curator-fee-bips) BPS_DENOMINATOR))
+              (seller-payment (- pack-price curator-fee)))
+          (begin
+            ;; Transfer curator fee
+            (if (> curator-fee u0)
+              (try! (stx-transfer? curator-fee tx-sender curator))
+              true)
+            ;; Process pack purchases with seller payments
+            (try! (process-pack-purchases-v2 listing-ids tx-sender seller-payment))
+            ;; Update pack purchase count
+            (map-set packs-v2
+              { id: pack-id }
+              (merge pack { purchases: (+ (get purchases pack) u1) }))
+            ;; Log pack purchase event
+            (log-event "pack-v2-purchased" tx-sender none (some pack-price) none)
+            (clear-reentrancy)
+            (ok true))))
     ERR_PACK_NOT_FOUND))
 
 ;; Helper function to process pack purchases

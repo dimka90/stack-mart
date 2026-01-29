@@ -4,20 +4,24 @@
  * multipliers based on user tier, and streak bonuses.
  */
 
-export enum ActivityType {
-    CONTRACT_CALL = 'contract-interaction',
-    CONTRACT_DEPLOY = 'contract-deployment',
-    CONNECT_USAGE = 'connect',
-    LIBRARY_USE = 'library_use',
-    REFERRAL = 'referral'
-}
+export const ActivityType = {
+    CONTRACT_CALL: 'contract-interaction',
+    CONTRACT_DEPLOY: 'contract-deployment',
+    CONNECT_USAGE: 'connect',
+    LIBRARY_USE: 'library_use',
+    REFERRAL: 'referral'
+} as const;
 
-export enum UserTier {
-    BRONZE = 'bronze',
-    SILVER = 'silver',
-    GOLD = 'gold',
-    PLATINUM = 'platinum'
-}
+export type ActivityType = typeof ActivityType[keyof typeof ActivityType];
+
+export const UserTier = {
+    BRONZE: 'bronze',
+    SILVER: 'silver',
+    GOLD: 'gold',
+    PLATINUM: 'platinum'
+} as const;
+
+export type UserTier = typeof UserTier[keyof typeof UserTier];
 
 interface PointConfig {
     basePoints: number;

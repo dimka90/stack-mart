@@ -59,29 +59,59 @@ export const LeaderboardDisplay: React.FC = () => {
                                 className={`hover:bg-white/10 transition-colors ${entry.user === 'Your Account' ? 'bg-orange-500/10' : ''}`}
                             >
                                 <td className="px-6 py-4">
-                                    <span className={`font-bold ${entry.rank <= 3 ? 'text-orange-500' : 'text-gray-400'}`}>
-                                        #{entry.rank}
-                                    </span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`font-bold ${entry.rank <= 3 ? 'text-orange-500' : 'text-gray-400'}`}>
+                                            #{entry.rank}
+                                        </span>
+                                        {entry.rank <= 3 && (
+                                            <div className="flex gap-1">
+                                                {[...Array(4 - entry.rank)].map((_, i) => (
+                                                    <span key={i} className="text-[10px] animate-pulse">⭐</span>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
-                                <td className="px-6 py-4 font-medium text-white">
-                                    {entry.user}
+                                <td className="px-6 py-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-white">{entry.user}</span>
+                                        <div className="flex gap-1 mt-1">
+                                            {entry.impactScore > 80 && (
+                                                <span className="text-[8px] bg-green-500/20 text-green-400 px-1 rounded uppercase font-black tracking-tighter shadow-[0_0_10px_rgba(34,197,94,0.3)]">
+                                                    High Impact
+                                                </span>
+                                            )}
+                                            {entry.points > 100000 && (
+                                                <span className="text-[8px] bg-purple-500/20 text-purple-400 px-1 rounded uppercase font-black tracking-tighter shadow-[0_0_10px_rgba(168,85,247,0.3)]">
+                                                    OG Builder
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 </td>
-                                <td className="px-6 py-4 text-right font-mono font-bold text-gray-200">
-                                    {entry.points.toLocaleString()}
+                                <td className="px-6 py-4 text-right">
+                                    <div className="flex flex-col items-end">
+                                        <span className="font-mono font-bold text-gray-200">
+                                            {entry.points.toLocaleString()}
+                                        </span>
+                                        <span className="text-[10px] text-gray-500 font-medium">Points</span>
+                                    </div>
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        <span className="text-orange-500 font-bold">{entry.impactScore}</span>
-                                        <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                        <div className="flex flex-col items-end mr-1">
+                                            <span className="text-orange-500 font-bold text-xs">{entry.impactScore}%</span>
+                                        </div>
+                                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden border border-white/5">
                                             <div
-                                                className="h-full bg-orange-500"
+                                                className="h-full bg-gradient-to-r from-orange-600 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.5)]"
                                                 style={{ width: `${entry.impactScore}%` }}
                                             ></div>
                                         </div>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4 text-center">
-                                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border ${TIER_COLORS[entry.tier]}`}>
+                                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded border shadow-lg transition-transform hover:scale-110 cursor-default ${TIER_COLORS[entry.tier]}`}>
                                         {entry.tier}
                                     </span>
                                 </td>

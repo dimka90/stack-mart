@@ -1400,3 +1400,25 @@
   (let ((results (map create-single-listing listings-data)))
     (ok results)))
 
+(define-private (create-single-listing (listing-data { price: uint, royalty-bips: uint, royalty-recipient: principal }))
+  (let ((price (get price listing-data))
+        (royalty-bips (get royalty-bips listing-data))
+        (royalty-recipient (get royalty-recipient listing-data)))
+    (if (<= royalty-bips MAX_ROYALTY_BIPS)
+      (let ((id (var-get next-id)))
+        (begin
+          (map-set listings
+            { id: id }
+            { seller: tx-sender
+            , price: price
+            , royalty-bips: royalty-bips
+            , royalty-recipient: royalty-recipient
+            , nft-contract: none
+            , token-id: none
+            , license-terms: none })
+          (var-set next-id (+ id u1))
+          (add-listing-to-seller-index tx-sender id)
+          id))
+      u0))) ;; Return 0 for failed listings
+
+;; Emergency functions for admin

@@ -43,3 +43,4 @@
 (define-constant ERR_PACK_NOT_FOUND (err u404))
 (define-constant ERR_INVALID_LISTING (err u400))
 (define-constant ERR_BUNDLE_EMPTY (err u400))
+(define-data-var admin principal tx-sender)

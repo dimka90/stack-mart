@@ -98,3 +98,13 @@
   })
 
 ;; Reputation system
+(define-map reputation
+  { user: principal }
+  { successful-txs: uint
+  , failed-txs: uint
+  , rating-sum: uint
+  , rating-count: uint
+  , total-volume: uint
+  })
+
+;; Like system

@@ -37,3 +37,4 @@
 (define-constant ERR_NOT_DELIVERED (err u400))
 (define-constant ERR_DISPUTE_NOT_FOUND (err u404))
 (define-constant ERR_DISPUTE_RESOLVED (err u400))
+(define-constant ERR_INSUFFICIENT_STAKES (err u400))

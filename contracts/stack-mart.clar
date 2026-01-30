@@ -123,3 +123,13 @@
   })
 
 ;; Transaction history tracking
+(define-map transaction-history
+  { principal: principal
+  , tx-index: uint }
+  { listing-id: uint
+  , counterparty: principal
+  , amount: uint
+  , completed: bool
+  , timestamp: uint
+  })
+

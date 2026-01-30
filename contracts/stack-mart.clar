@@ -296,3 +296,22 @@
   , state: (string-ascii 20) ;; "active", "ended", "cancelled"
   })
 
+(define-public (create-auction (nft-trait <sip009-nft-trait>) (token-id uint) (start-price uint) (reserve-price uint) (duration uint))
+  (let ((id (var-get next-auction-id)))
+    (begin
+      ;; Transfer NFT to contract
+      (try! (contract-call? nft-trait transfer token-id tx-sender (as-contract tx-sender)))
+      (map-set auctions
+        { id: id }
+        { seller: tx-sender
+        , nft-contract: (contract-of nft-trait)
+        , token-id: token-id
+        , start-price: start-price
+        , reserve-price: reserve-price
+        , end-block: (+ burn-block-height duration)
+        , highest-bid: u0
+        , highest-bidder: none
+        , state: "active" })
+      (var-set next-auction-id (+ id u1))
+      (ok id))))
+

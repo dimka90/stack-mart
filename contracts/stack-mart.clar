@@ -860,3 +860,8 @@
     tx (ok tx)
     ERR_NOT_FOUND))
 
+(define-read-only (get-dispute (dispute-id uint))
+  (match (map-get? disputes { id: dispute-id })
+    dispute (ok dispute)
+    ERR_DISPUTE_NOT_FOUND))
+

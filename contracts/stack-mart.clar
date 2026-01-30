@@ -25,3 +25,4 @@
 (define-constant MAX_AUCTION_DURATION u1440) ;; 10 days maximum
 (define-data-var next-auction-id uint u1)
 (define-constant ERR_BAD_ROYALTY (err u400))
+(define-constant ERR_NOT_FOUND (err u404))

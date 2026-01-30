@@ -1248,3 +1248,5 @@
     ERR_NOT_FOUND))
 
 ;; Offer system - buyers can make offers on listings
+(define-data-var next-offer-id uint u1)
+

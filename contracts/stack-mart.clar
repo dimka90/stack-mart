@@ -1095,3 +1095,24 @@
     ERR_PACK_NOT_FOUND))
 
 ;; Create a bundle of listings with discount
+(define-public (create-bundle (listing-ids (list 10 uint)) (discount-bips uint))
+  (begin
+    ;; Validate bundle not empty
+    (asserts! (> (len listing-ids) u0) ERR_BUNDLE_EMPTY)
+    ;; Validate discount within limits
+    (asserts! (<= discount-bips MAX_DISCOUNT_BIPS) ERR_BAD_ROYALTY)
+    ;; Validate all listings exist and belong to creator
+    ;; Note: In full implementation, would validate each listing
+    (let ((bundle-id (var-get next-bundle-id)))
+      (begin
+        (map-set bundles
+          { id: bundle-id }
+          { listing-ids: listing-ids
+          , discount-bips: discount-bips
+          , creator: tx-sender
+          , created-at-block: u0 })
+        (var-set next-bundle-id (+ bundle-id u1))
+        (print { event: "bundle_created", id: bundle-id, creator: tx-sender, count: (len listing-ids) })
+        (ok bundle-id)))))
+
+;; Buy a bundle (creates escrows for all listings in bundle with discount)

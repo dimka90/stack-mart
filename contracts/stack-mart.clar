@@ -865,3 +865,9 @@
     dispute (ok dispute)
     ERR_DISPUTE_NOT_FOUND))
 
+(define-read-only (get-dispute-stakes (dispute-id uint) (staker principal))
+  (match (map-get? dispute-stakes { dispute-id: dispute-id, staker: staker })
+    stake (ok stake)
+    ERR_NOT_FOUND))
+
+;; Create a dispute for an escrow

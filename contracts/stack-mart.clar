@@ -1197,3 +1197,9 @@
     ERR_PACK_NOT_FOUND))
 
 ;; Helper function to process pack purchases
+(define-private (process-pack-purchases (listing-ids (list 20 uint)) (buyer principal))
+  ;; Note: Simplified - in full implementation would process each listing
+  true)
+;; (Duplicate Auction logic removed)
+
+;; Rating system for completed transactions

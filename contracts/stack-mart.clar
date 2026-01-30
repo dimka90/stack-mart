@@ -408,3 +408,9 @@
 (define-read-only (get-next-id)
   (ok (var-get next-id)))
 
+(define-read-only (get-listing (id uint))
+  (match (map-get? listings { id: id })
+    listing (ok listing)
+    ERR_NOT_FOUND))
+
+;; get-listing-with-nft is an alias for get-listing (both return same data)

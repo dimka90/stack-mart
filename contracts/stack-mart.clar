@@ -20,3 +20,4 @@
 
 ;; Constants for new features
 (define-constant MAX_LISTING_DESCRIPTION_LENGTH u1000)
+(define-constant MAX_TAGS_PER_LISTING u10)

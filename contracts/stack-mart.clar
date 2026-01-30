@@ -1089,3 +1089,9 @@
     bundle (ok bundle)
     ERR_BUNDLE_NOT_FOUND))
 
+(define-read-only (get-pack (pack-id uint))
+  (match (map-get? packs { id: pack-id })
+    pack (ok pack)
+    ERR_PACK_NOT_FOUND))
+
+;; Create a bundle of listings with discount

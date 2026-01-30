@@ -46,3 +46,6 @@
 (define-data-var admin principal tx-sender)
 (define-constant ERR_ALREADY_WISHLISTED (err u405))
 (define-constant ERR_PAUSED (err u406))
+(define-data-var paused bool false)
+
+;; Marketplace fee constants

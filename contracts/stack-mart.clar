@@ -582,3 +582,53 @@
     ERR_NOT_FOUND))
 
 ;; Seller attests delivery with delivery hash
+(define-public (attest-delivery (listing-id uint) (delivery-hash (buff 32)))
+  (match (map-get? escrows { listing-id: listing-id })
+    escrow
+      (match (map-get? listings { id: listing-id })
+        listing
+          (begin
+            (asserts! (is-eq tx-sender (get seller listing)) ERR_NOT_SELLER)
+            (asserts! (is-eq (get state escrow) "pending") ERR_INVALID_STATE)
+            ;; Check attestation doesn't already exist
+            (asserts! (is-none (map-get? delivery-attestations { listing-id: listing-id })) ERR_ALREADY_ATTESTED)
+            ;; Transfer NFT if present
+            (let ((nft-contract-opt (get nft-contract listing))
+                  (token-id-opt (get token-id listing))
+                  (buyer (get buyer escrow)))
+              (begin
+                ;; Transfer NFT to buyer when seller attests delivery
+                (match nft-contract-opt
+                  nft-contract-principal
+                    (match token-id-opt
+                      token-id-value
+                        (match (contract-call? nft-contract-principal transfer token-id-value tx-sender buyer)
+                          (ok transfer-success)
+                            (asserts! transfer-success ERR_NFT_TRANSFER_FAILED)
+                          (err error-code)
+                            (err error-code))
+                      true)
+                  true)
+                ;; Create delivery attestation
+                (map-set delivery-attestations
+                  { listing-id: listing-id }
+                  { delivery-hash: delivery-hash
+                  , attested-at-block: u0
+                  , confirmed: false
+                  , rejected: false
+                  , rejection-reason: none })
+                ;; Update escrow state to delivered
+                (map-set escrows
+                  { listing-id: listing-id }
+                  { buyer: buyer
+                  , amount: (get amount escrow)
+                  , created-at-block: (get created-at-block escrow)
+                  , state: "delivered"
+                  , timeout-block: (get timeout-block escrow) })
+                (print { event: "delivery_attested", listing-id: listing-id, delivery-hash: delivery-hash })
+                (ok true))))
+        ERR_NOT_FOUND)
+    ERR_ESCROW_NOT_FOUND))
+
+;; Seller confirms delivery (legacy function - kept for backward compatibility)
+;; Note: New code should use attest-delivery with actual delivery hash

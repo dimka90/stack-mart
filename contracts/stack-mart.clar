@@ -19,3 +19,4 @@
 (define-data-var next-pack-id uint u1)
 
 ;; Constants for new features
+(define-constant MAX_LISTING_DESCRIPTION_LENGTH u1000)

@@ -1460,3 +1460,6 @@
 (define-read-only (get-seller-listing-count (seller principal))
   (default-to u0 (map-get? seller-listing-count { seller: seller })))
 
+(define-read-only (get-seller-listing-id-at-index (seller principal) (index uint))
+  (map-get? seller-listings { seller: seller, index: index }))
+

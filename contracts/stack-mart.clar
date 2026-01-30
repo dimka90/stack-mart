@@ -152,3 +152,10 @@
   , resolution: (optional (string-ascii 20))
   })
 
+(define-map dispute-stakes
+  { dispute-id: uint
+  , staker: principal }
+  { amount: uint
+  , side: bool
+  })
+

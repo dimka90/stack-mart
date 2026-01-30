@@ -1260,3 +1260,24 @@
   , cancelled: bool
   })
 
+(define-public (make-offer (listing-id uint) (amount uint) (duration-blocks uint))
+  (match (map-get? listings { id: listing-id })
+    listing
+      (let ((offer-id (var-get next-offer-id)))
+        (begin
+          (asserts! (not (is-eq tx-sender (get seller listing))) ERR_NOT_OWNER)
+          (asserts! (> amount u0) ERR_INVALID_LISTING)
+          ;; Transfer offer amount to contract (escrow)
+          (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+          (map-set offers
+            { id: offer-id }
+            { listing-id: listing-id
+            , buyer: tx-sender
+            , amount: amount
+            , expires-at-block: (+ burn-block-height duration-blocks)
+            , accepted: false
+            , cancelled: false })
+          (var-set next-offer-id (+ offer-id u1))
+          (ok offer-id)))
+    ERR_NOT_FOUND))
+

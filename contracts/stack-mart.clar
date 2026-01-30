@@ -35,3 +35,4 @@
 (define-constant ERR_TIMEOUT_NOT_REACHED (err u400))
 (define-constant ERR_ALREADY_ATTESTED (err u400))
 (define-constant ERR_NOT_DELIVERED (err u400))
+(define-constant ERR_DISPUTE_NOT_FOUND (err u404))

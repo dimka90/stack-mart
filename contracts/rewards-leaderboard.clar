@@ -566,3 +566,59 @@
         true
     )
 )
+
+;; ============================================================================
+;; LEADERBOARD SNAPSHOTS
+;; ============================================================================
+
+;; Snapshot Types
+(define-constant SNAPSHOT-WEEKLY u1)
+(define-constant SNAPSHOT-MONTHLY u2)
+
+;; Leaderboard Snapshots
+(define-map LeaderboardSnapshots
+    { period-type: uint, period-id: uint }
+    {
+        created-at-block: uint,
+        top-users: (list 10 principal),
+        top-scores: (list 10 uint)
+    }
+)
+
+;; Read-only: Get Snapshot
+(define-read-only (get-snapshot (period-type uint) (period-id uint))
+    (map-get? LeaderboardSnapshots { period-type: period-type, period-id: period-id })
+)
+
+;; Admin: Create Snapshot
+(define-public (create-snapshot 
+    (period-type uint) 
+    (period-id uint) 
+    (top-users (list 10 principal)) 
+    (top-scores (list 10 uint)))
+    (begin
+        (asserts! (is-eq tx-sender ADMIN) ERR-NOT-AUTHORIZED)
+        (asserts! (or (is-eq period-type SNAPSHOT-WEEKLY) (is-eq period-type SNAPSHOT-MONTHLY)) ERR-INVALID-POINTS)
+        (asserts! (is-eq (len top-users) (len top-scores)) ERR-INVALID-POINTS)
+        
+        (map-set LeaderboardSnapshots
+            { period-type: period-type, period-id: period-id }
+            {
+                created-at-block: burn-block-height,
+                top-users: top-users,
+                top-scores: top-scores
+            }
+        )
+        (print { event: "snapshot-created", period-type: period-type, period-id: period-id })
+        (ok true)
+    )
+)
+
+;; Read-only: Calculate Period ID
+(define-read-only (get-current-week-id)
+    (ok (/ burn-block-height (* BLOCKS-PER-DAY u7)))
+)
+
+(define-read-only (get-current-month-id)
+    (ok (/ burn-block-height (* BLOCKS-PER-DAY u30)))
+)

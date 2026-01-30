@@ -1466,3 +1466,10 @@
 (define-read-only (get-listings-by-seller (seller principal)) 
   (ok "Use get-seller-listing-count and get-seller-listing-id-at-index to iterate"))
 
+(define-read-only (get-formatted-reputation (user principal)) 
+  (let ((rep (unwrap! (get-user-reputation user) (err u0))))
+    (ok { user: rep
+        , success-rate: (if (> (+ (get successful-txs rep) (get failed-txs rep)) u0)
+                                   (/ (* (get successful-txs rep) u100)
+                                      (+ (get successful-txs rep) (get failed-txs rep)))
+                                   u0) })))

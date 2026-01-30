@@ -222,3 +222,8 @@
     (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) 
     (ok (var-set marketplace-fee-bips new-fee))))
 
+(define-public (set-fee-recipient (new-recipient principal)) 
+  (begin 
+    (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) 
+    (ok (var-set fee-recipient new-recipient))))
+

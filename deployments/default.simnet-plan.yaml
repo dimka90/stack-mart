@@ -64,13 +64,23 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: stack-mart
-            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/stack-mart.clar
-            clarity-version: 4
-        - emulated-contract-publish:
             contract-name: mock-nft
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             path: contracts/mock-nft.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: rewards-leaderboard
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/rewards-leaderboard.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: sp-010
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/sp-010.clar
+            clarity-version: 4
+        - emulated-contract-publish:
+            contract-name: stack-mart
+            emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
+            path: contracts/stack-mart.clar
             clarity-version: 4
       epoch: "3.3"

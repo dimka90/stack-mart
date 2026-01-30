@@ -8,12 +8,21 @@
 (define-constant ERR-BUFFER-OVERFLOW (err u102))
 (define-constant ERR-INVALID-POINTS (err u103))
 (define-constant ERR-COOLDOWN-ACTIVE (err u104))
+(define-constant ERR-CONTRACT-PAUSED (err u105))
 
 ;; Constants
 (define-constant ADMIN tx-sender)
 (define-constant POINTS-PER-CONTRACT-ACTIVITY u50)
 (define-constant POINTS-PER-LIBRARY-USAGE u25)
+(define-constant POINTS-PER-REFERRAL u100)
+(define-constant REPUTATION-PER-ACTIVITY u10)
+(define-constant LEVEL-THRESHOLD u1000) ;; 1000 points per level
+(define-constant BLOCKS-PER-DAY u144) ;; Rough estimate for Stacks
 (define-constant DECAY-FACTOR u95) ;; 5% decay periodically
+
+;; Data Variables
+(define-data-var contract-paused bool false)
+(define-data-var activity-point-base uint u50)
 
 ;; Data Maps
 (define-map UserPoints
@@ -34,6 +43,19 @@
         total-users: uint,
         total-points-distributed: uint,
         top-score: uint
+    }
+)
+
+;; Referral Tracking
+(define-map Referrals principal (list 200 principal))
+(define-map Referrers principal principal)
+
+;; Streak Tracking
+(define-map UserStreaks 
+    principal 
+    {
+        current-streak: uint,
+        last-activity-block: uint
     }
 )
 
@@ -58,7 +80,7 @@
             contract-impact-points: u0,
             library-usage-points: u0,
             github-contrib-points: u0,
-            last-activity-block: block-height,
+            last-activity-block: burn-block-height,
             reputation-score: u0
         }
     )
@@ -67,36 +89,42 @@
 ;; Public: Log Smart Contract Activity
 ;; Increments points based on contract interaction and impact
 (define-public (log-contract-activity (user principal) (impact-score uint))
-    (let (
+    (begin
+        (asserts! (not (var-get contract-paused)) ERR-CONTRACT-PAUSED)
+        (let (
         (current-stats (default-to 
             {
                 total-points: u0,
                 contract-impact-points: u0,
                 library-usage-points: u0,
                 github-contrib-points: u0,
-                last-activity-block: block-height,
+                last-activity-block: burn-block-height,
                 reputation-score: u0
             }
             (map-get? UserPoints user)
         ))
-        (base-points POINTS-PER-CONTRACT-ACTIVITY)
+        (base-points (var-get activity-point-base))
+        (multiplier (calculate-multiplier user))
         (impact-bonus (* impact-score u10))
-        (total-new-points (+ base-points impact-bonus))
+        (total-new-points (* (+ base-points impact-bonus) multiplier))
     )
         ;; Check for overflow
         (asserts! (< (+ (get total-points current-stats) total-new-points) u340282366920938463463374607431768211455) ERR-BUFFER-OVERFLOW)
+        
         
         (map-set UserPoints user
             (merge current-stats {
                 total-points: (+ (get total-points current-stats) total-new-points),
                 contract-impact-points: (+ (get contract-impact-points current-stats) total-new-points),
-                last-activity-block: block-height
+                reputation-score: (+ (get reputation-score current-stats) REPUTATION-PER-ACTIVITY),
+                last-activity-block: burn-block-height
             })
         )
+        (update-streak user)
         (update-global-stats total-new-points)
         (ok true)
     )
-)
+))
 
 ;; Public: Log Library Usage
 ;; Tracks use of @stacks/connect and @stacks/transactions
@@ -108,7 +136,7 @@
                 contract-impact-points: u0,
                 library-usage-points: u0,
                 github-contrib-points: u0,
-                last-activity-block: block-height,
+                last-activity-block: burn-block-height,
                 reputation-score: u0
             }
             (map-get? UserPoints user)
@@ -125,7 +153,7 @@
             (merge current-stats {
                 total-points: (+ (get total-points current-stats) points),
                 library-usage-points: (+ (get library-usage-points current-stats) points),
-                last-activity-block: block-height
+                last-activity-block: burn-block-height
             })
         )
         (update-global-stats points)
@@ -143,7 +171,7 @@
                 contract-impact-points: u0,
                 library-usage-points: u0,
                 github-contrib-points: u0,
-                last-activity-block: block-height,
+                last-activity-block: burn-block-height,
                 reputation-score: u0
             }
             (map-get? UserPoints user)
@@ -159,7 +187,7 @@
             (merge current-stats {
                 total-points: (+ (get total-points current-stats) points),
                 github-contrib-points: (+ (get github-contrib-points current-stats) points),
-                last-activity-block: block-height
+                last-activity-block: burn-block-height
             })
         )
         (update-global-stats points)
@@ -177,7 +205,7 @@
                 contract-impact-points: u0,
                 library-usage-points: u0,
                 github-contrib-points: u0,
-                last-activity-block: block-height,
+                last-activity-block: burn-block-height,
                 reputation-score: u0
             }
             (map-get? UserPoints user)
@@ -186,12 +214,12 @@
         (new-points (/ (* old-points DECAY-FACTOR) u100))
     )
         ;; Only apply if significant time has passed (e.g., 1000 blocks)
-        (asserts! (> (- block-height (get last-activity-block current-stats)) u1000) (ok true))
+        (asserts! (> (- burn-block-height (get last-activity-block current-stats)) u1000) (ok true))
         
         (map-set UserPoints user
             (merge current-stats {
                 total-points: new-points,
-                last-activity-block: block-height
+                last-activity-block: burn-block-height
             })
         )
         (ok true)
@@ -210,6 +238,130 @@
                 percentile: (/ (* (get total-points user-stats) u100) (if (> (get top-score global) u0) (get top-score global) u1))
             })
             (err ERR-USER-NOT-FOUND)
+        )
+    )
+)
+
+;; Read-only: Get User Level
+(define-read-only (get-user-level (user principal))
+    (let (
+        (stats (get-user-stats user))
+    )
+        (match stats
+            user-stats (ok (/ (get total-points user-stats) LEVEL-THRESHOLD))
+            (err ERR-USER-NOT-FOUND)
+        )
+    )
+)
+
+;; Read-only: Get Reputation
+(define-read-only (get-user-reputation (user principal))
+    (let (
+        (stats (get-user-stats user))
+    )
+        (match stats
+            user-stats (ok (get reputation-score user-stats))
+            (err ERR-USER-NOT-FOUND)
+        )
+    )
+)
+
+;; Public: Log Referral
+;; Tracks who referred whom and rewards the referrer
+(define-public (log-referral (new-user principal) (referrer principal))
+    (let (
+        (current-referrals (default-to (list) (map-get? Referrals referrer)))
+        (existing-referrer (map-get? Referrers new-user))
+    )
+        ;; New user cannot be the referrer
+        (asserts! (not (is-eq new-user referrer)) ERR-INVALID-POINTS)
+        ;; New user cannot already have a referrer
+        (asserts! (is-none existing-referrer) ERR-INVALID-POINTS)
+        
+        ;; Update Referrers map
+        (map-set Referrers new-user referrer)
+        
+        ;; Update Referrals list (appends new user to referrer's list)
+        (map-set Referrals referrer (unwrap! (as-max-len? (append current-referrals new-user) u200) ERR-BUFFER-OVERFLOW))
+        
+        ;; Reward the referrer
+        (let (
+            (referrer-stats (default-to 
+                {
+                    total-points: u0,
+                    contract-impact-points: u0,
+                    library-usage-points: u0,
+                    github-contrib-points: u0,
+                    last-activity-block: burn-block-height,
+                    reputation-score: u0
+                }
+                (map-get? UserPoints referrer)
+            ))
+            (points POINTS-PER-REFERRAL)
+        )
+            (map-set UserPoints referrer
+                (merge referrer-stats {
+                    total-points: (+ (get total-points referrer-stats) points),
+                    last-activity-block: burn-block-height
+                })
+            )
+            (update-global-stats points)
+        )
+        (ok true)
+    )
+)
+
+;; Read-only: Get Streak
+(define-read-only (get-user-streak (user principal))
+    (default-to { current-streak: u0, last-activity-block: u0 } (map-get? UserStreaks user))
+)
+
+;; Admin: Set Paused State
+(define-public (set-paused (paused bool))
+    (begin
+        (asserts! (is-eq tx-sender ADMIN) ERR-NOT-AUTHORIZED)
+        (ok (var-set contract-paused paused))
+    )
+)
+
+;; Admin: Update Base Points
+(define-public (set-activity-point-base (new-base uint))
+    (begin
+        (asserts! (is-eq tx-sender ADMIN) ERR-NOT-AUTHORIZED)
+        (ok (var-set activity-point-base new-base))
+    )
+)
+
+;; Internal: Calculate Multiplier based on streak
+(define-private (calculate-multiplier (user principal))
+    (let (
+        (streak-stats (default-to { current-streak: u0, last-activity-block: u0 } (map-get? UserStreaks user)))
+        (streak (get current-streak streak-stats))
+    )
+        (if (> streak u30) u3 ;; Max 3x for 30+ day streak
+            (if (> streak u7) u2 ;; 2x for 1 week+
+                u1 ;; 1x default
+            )
+        )
+    )
+)
+
+;; Update streak logic
+(define-private (update-streak (user principal))
+    (let (
+        (streak-stats (default-to { current-streak: u0, last-activity-block: u0 } (map-get? UserStreaks user)))
+        (last-block (get last-activity-block streak-stats))
+        (current-streak (get current-streak streak-stats))
+    )
+        (if (is-eq last-block u0)
+            (map-set UserStreaks user { current-streak: u1, last-activity-block: burn-block-height })
+            (if (< (- burn-block-height last-block) (* BLOCKS-PER-DAY u2))
+                (if (> (- burn-block-height last-block) BLOCKS-PER-DAY)
+                    (map-set UserStreaks user { current-streak: (+ current-streak u1), last-activity-block: burn-block-height })
+                    true ;; Still within same day, don't increment but don't reset
+                )
+                (map-set UserStreaks user { current-streak: u1, last-activity-block: burn-block-height }) ;; Reset if missed a day
+            )
         )
     )
 )

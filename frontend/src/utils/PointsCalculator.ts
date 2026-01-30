@@ -2,6 +2,7 @@
  * PointsCalculator Utility
  * Handles complex points calculation logic including base points, 
  * multipliers based on user tier, and streak bonuses.
+ * This file is kept in sync with contracts/rewards-leaderboard.clar
  */
 
 export const ActivityType = {
@@ -24,12 +25,9 @@ export const UserTier = {
 
 export type UserTier = typeof UserTier[keyof typeof UserTier];
 
-interface PointConfig {
-    basePoints: number;
-    multiplier: number;
-}
-
 export class PointsCalculator {
+    public static readonly LEVEL_THRESHOLD = 1000;
+
     private static BASE_POINTS: Record<ActivityType, number> = {
         [ActivityType.CONTRACT_CALL]: 50,
         [ActivityType.CONTRACT_DEPLOY]: 500,
@@ -60,15 +58,34 @@ export class PointsCalculator {
         // Base calculation
         let total = base * tierMultiplier;
 
-        // Apply streak bonus (5% per day, capped at 50%)
-        const streakBonus = Math.min(streakDays * 0.05, 0.50);
-        total += total * streakBonus;
+        // Apply streak multiplier (Matches Clarity contract logic)
+        let streakMultiplier = 1;
+        if (streakDays >= 30) {
+            streakMultiplier = 3;
+        } else if (streakDays >= 7) {
+            streakMultiplier = 2;
+        }
 
-        return Math.floor(total);
+        return Math.floor(total * streakMultiplier);
     }
 
     /**
-     * Determines next tier progress
+     * Calculates current level based on total points
+     */
+    static calculateLevel(points: number): number {
+        return Math.floor(points / this.LEVEL_THRESHOLD);
+    }
+
+    /**
+     * Calculates progress to next level (0-100)
+     */
+    static calculateProgress(points: number): number {
+        const currentPointsInLevel = points % this.LEVEL_THRESHOLD;
+        return (currentPointsInLevel / this.LEVEL_THRESHOLD) * 100;
+    }
+
+    /**
+     * Determines next tier progress (Legacy support for UI)
      */
     static getTierProgress(currentPoints: number): { current: UserTier; next: UserTier | null; progress: number } {
         if (currentPoints < 1000) return { current: UserTier.BRONZE, next: UserTier.SILVER, progress: (currentPoints / 1000) * 100 };

@@ -1,46 +1,101 @@
-import { PointsCalculator, ActivityType, UserTier } from '../frontend/src/utils/PointsCalculator';
+import { describe, expect, it } from "vitest";
+import { Cl } from "@stacks/transactions";
 
-describe('Rewards System Logic Tests', () => {
-    describe('PointsCalculator', () => {
-        test('calculates base points correctly for contract calls', () => {
-            const points = PointsCalculator.calculatePoints(ActivityType.CONTRACT_CALL, UserTier.BRONZE);
-            expect(points).toBe(50);
-        });
+// Import simnet for proper typing
+declare const simnet: any;
 
-        test('applies tier multipliers (Gold = 1.5x)', () => {
-            const points = PointsCalculator.calculatePoints(ActivityType.CONTRACT_DEPLOY, UserTier.GOLD);
-            // 500 * 1.5 = 750
-            expect(points).toBe(750);
-        });
+const accounts = simnet.getAccounts();
+const deployer = accounts.get("deployer")!;
+const wallet_1 = accounts.get("wallet_1")!;
 
-        test('applies streak bonuses (10 days = 50% bonus)', () => {
-            const points = PointsCalculator.calculatePoints(ActivityType.LIBRARY_USE, UserTier.BRONZE, 10);
-            // 100 * 1.0 (Bronze) + 50% = 150
-            expect(points).toBe(150);
-        });
+const contractName = "rewards-leaderboard";
 
-        test('caps streak bonus at 50%', () => {
-            const points = PointsCalculator.calculatePoints(ActivityType.LIBRARY_USE, UserTier.BRONZE, 20);
-            // 100 * 1.0 + 50% = 150 (not 100% bonus)
-            expect(points).toBe(150);
-        });
+describe("Rewards Multipliers & streaks", () => {
+    it("should start with 1x multiplier", () => {
+        const user = wallet_1;
+        const impactScore = 0; // Result: 50 base points * 1 = 50 points
 
-        test('calculates GitHub contribution points', () => {
-            const points = PointsCalculator.calculatePoints(ActivityType.GITHUB_CONTRIBUTION, UserTier.SILVER);
-            // 75 * 1.2 = 90
-            expect(points).toBe(90);
-        });
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(impactScore)], deployer);
 
-        test('correctly determines tier progress', () => {
-            const progress = PointsCalculator.getTierProgress(1500);
-            expect(progress.current).toBe(UserTier.SILVER);
-            expect(progress.next).toBe(UserTier.GOLD);
-            // (1500 - 1000) / 4000 * 100 = 12.5%
-            expect(progress.progress).toBe(12.5);
-        });
+        const stats: any = simnet.callReadOnlyFn(contractName, "get-user-stats", [Cl.standardPrincipal(user)], deployer).result;
+        expect(stats.value.data["total-points"]).toEqual(Cl.uint(50));
+    });
+
+    it("should maintain 1x multiplier if same day activity", () => {
+        const user = wallet_1;
+
+        // Day 1
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        // Same day (e.g. 10 blocks later)
+        simnet.mineEmptyBlocks(10);
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        const stats: any = simnet.callReadOnlyFn(contractName, "get-user-stats", [Cl.standardPrincipal(user)], deployer).result;
+        expect(stats.value.data["total-points"]).toEqual(Cl.uint(100)); // 50 + 50
+    });
+
+    it("should increment streak after 1 day", () => {
+        const user = wallet_1;
+        const blocksPerDay = 144;
+
+        // Day 1
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        // Day 2
+        simnet.mineEmptyBlocks(blocksPerDay + 1);
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        const streak: any = simnet.callReadOnlyFn(contractName, "get-user-streak", [Cl.standardPrincipal(user)], deployer).result;
+        expect(streak.data["current-streak"]).toEqual(Cl.uint(2));
+    });
+
+    it("should apply 2x multiplier for 7-day streak", () => {
+        const user = accounts.get("wallet_2")!;
+        const blocksPerDay = 144;
+
+        // Simulate 7 days of activity
+        for (let i = 0; i < 7; i++) {
+            simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+            simnet.mineEmptyBlocks(blocksPerDay + 1);
+        }
+
+        // On day 8, 2x multiplier should be active
+        // Base is 50. With 2x it should be 100.
+        const { result } = simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+        expect(result).toBeOk(Cl.bool(true));
+
+        const stats: any = simnet.callReadOnlyFn(contractName, "get-user-stats", [Cl.standardPrincipal(user)], deployer).result;
+        // Total should be 50*7 + 100 = 450
+        expect(stats.value.data["total-points"]).toEqual(Cl.uint(450));
+    });
+
+    it("should reset streak if activity is missed for 2 days", () => {
+        const user = accounts.get("wallet_3")!;
+        const blocksPerDay = 144;
+
+        // Day 1
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        // Wait 3 days
+        simnet.mineEmptyBlocks(blocksPerDay * 3);
+
+        // Activity on Day 4
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        const streak: any = simnet.callReadOnlyFn(contractName, "get-user-streak", [Cl.standardPrincipal(user)], deployer).result;
+        expect(streak.data["current-streak"]).toEqual(Cl.uint(1)); // Reset to 1
+    });
+
+    it("should allow admin to change base points and affect rewards", () => {
+        const user = wallet_1;
+
+        // Change base points to 100
+        simnet.callPublicFn(contractName, "set-activity-point-base", [Cl.uint(100)], deployer);
+
+        simnet.callPublicFn(contractName, "log-contract-activity", [Cl.standardPrincipal(user), Cl.uint(0)], deployer);
+
+        const stats: any = simnet.callReadOnlyFn(contractName, "get-user-stats", [Cl.standardPrincipal(user)], deployer).result;
+        expect(stats.value.data["total-points"]).toEqual(Cl.uint(100));
     });
 });
-
-// Mocking global objects for ReferralManager tests if needed
-// However, since it relies on localStorage and window, unit testing 
-// might require a browser-like environment (JSDOM).

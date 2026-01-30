@@ -1,143 +1,97 @@
 import React from 'react';
 
-interface RewardStatProps {
-    label: string;
-    value: string | number;
-    icon: string;
-    trend?: string;
+interface RewardsDashboardProps {
+    points: number;
+    level: number;
+    streak: number;
+    reputation: number;
+    nextLevelPoints: number;
 }
 
-const RewardStat: React.FC<RewardStatProps> = ({ label, value, icon, trend }) => (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl p-6 transition-all hover:bg-white/10 group">
-        <div className="flex items-center justify-between mb-4">
-            <span className="text-3xl group-hover:scale-110 transition-transform">{icon}</span>
-            {trend && (
-                <span className={`text-xs font-semibold px-2 py-1 rounded-full ${trend.startsWith('+') ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}>
-                    {trend}
-                </span>
-            )}
-        </div>
-        <div className="text-sm text-gray-400 font-medium mb-1">{label}</div>
-        <div className="text-2xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
-            {value}
-        </div>
-    </div>
-);
-
-export const RewardsDashboard: React.FC = () => {
-    const [stats, setStats] = React.useState({
-        totalPoints: 0,
-        impact: 0,
-        libraryUsage: 0,
-        github: 0,
-        rank: 0,
-        history: [] as any[]
-    });
-
-    const [isLoading, setIsLoading] = React.useState(true);
-
-    React.useEffect(() => {
-        // Simulated data fetching from Stacks chain
-        const fetchRewardsData = async () => {
-            setIsLoading(true);
-            try {
-                // Mocking contract call response
-                setTimeout(() => {
-                    setStats({
-                        totalPoints: 24500,
-                        impact: 1200,
-                        libraryUsage: 850,
-                        github: 5000,
-                        rank: 42,
-                        history: [
-                            { date: '2026-01-20', activity: 'Contract Deployment', points: 500 },
-                            { date: '2026-01-22', activity: 'GitHub PR Merged', points: 2500 },
-                            { date: '2026-01-25', activity: 'Library Integration', points: 250 },
-                        ]
-                    });
-                    setIsLoading(false);
-                }, 1500);
-            } catch (error) {
-                console.error("Failed to fetch rewards:", error);
-                setIsLoading(false);
-            }
-        };
-
-        fetchRewardsData();
-    }, []);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
-            </div>
-        );
-    }
+const RewardsDashboard: React.FC<RewardsDashboardProps> = ({
+    points,
+    level,
+    streak,
+    reputation,
+    nextLevelPoints
+}) => {
+    const progress = (points % nextLevelPoints) / nextLevelPoints * 100;
 
     return (
-        <div className="min-h-screen bg-[#0a0a0b] text-white p-8">
-            <div className="max-w-7xl mx-auto">
-                <header className="mb-12">
-                    <h1 className="text-4xl font-extrabold mb-2 bg-gradient-to-r from-orange-500 to-pink-500 bg-clip-text text-transparent">
-                        StackMart Rewards
-                    </h1>
-                    <p className="text-gray-400 max-w-2xl">
-                        Track your impact, contract activity, and GitHub contributions to earn premium
-                        on-chain rewards and climb the global leaderboard.
-                    </p>
-                </header>
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto border border-slate-100">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Your Rewards</h2>
+                    <p className="text-slate-500 mt-1">Track your progress and earnings</p>
+                </div>
+                <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-full border border-amber-100">
+                    <span className="text-amber-600 font-bold text-xl">{points.toLocaleString()}</span>
+                    <span className="text-amber-800 font-medium uppercase text-xs tracking-wider">Points</span>
+                </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-                    <RewardStat
-                        label="Total Points"
-                        value={stats.totalPoints.toLocaleString()}
-                        icon="✨"
-                        trend="+12% this week"
-                    />
-                    <RewardStat
-                        label="Contract Impact"
-                        value={stats.impact.toLocaleString()}
-                        icon="📜"
-                    />
-                    <RewardStat
-                        label="Library Usage"
-                        value={stats.libraryUsage.toLocaleString()}
-                        icon="🛠️"
-                    />
-                    <RewardStat
-                        label="GitHub Contribs"
-                        value={stats.github.toLocaleString()}
-                        icon="🐙"
-                        trend="+2 PRs"
-                    />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 transition-hover hover:border-indigo-200 group">
+                    <p className="text-slate-500 text-sm font-medium mb-1">Current Level</p>
+                    <p className="text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">Level {level}</p>
+                    <div className="w-full bg-slate-200 h-2 rounded-full mt-4 overflow-hidden">
+                        <div
+                            className="bg-indigo-600 h-full rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-wide">
+                        {Math.round(nextLevelPoints - (points % nextLevelPoints))} points until level {level + 1}
+                    </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-8">
-                        <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-                            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                                <span>📈</span> Activity History
-                            </h2>
-                            <div className="h-64 flex items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-xl">
-                                Charts and activity logs will appear here
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 transition-hover hover:border-orange-200 group">
+                    <p className="text-slate-500 text-sm font-medium mb-1">Daily Streak</p>
+                    <p className="text-2xl font-bold text-slate-900 group-hover:text-orange-600 transition-colors">{streak} Days</p>
+                    <div className="flex gap-1 mt-4">
+                        {[...Array(7)].map((_, i) => (
+                            <div
+                                key={i}
+                                className={`h-2 flex-1 rounded-sm ${i < streak % 7 ? 'bg-orange-500' : 'bg-slate-200'}`}
+                            />
+                        ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-wide">
+                        {streak >= 7 ? '2x Multiplier Active!' : `${7 - (streak % 7)} days until 2x`}
+                    </p>
+                </div>
+
+                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 transition-hover hover:border-emerald-200 group">
+                    <p className="text-slate-500 text-sm font-medium mb-1">Reputation</p>
+                    <p className="text-2xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">{reputation}</p>
+                    <div className="mt-4 flex items-center gap-2">
+                        <div className="flex -space-x-1">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className={`w-3 h-3 rounded-full ${i < Math.floor(reputation / 100) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                            ))}
+                        </div>
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wide">Elite Status</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-8">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">Milestone Progress</h3>
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-50 hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold">1</div>
+                            <div>
+                                <p className="font-bold text-slate-800">Refer 5 Friends</p>
+                                <p className="text-xs text-slate-500">Earn 500 bonus points</p>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="space-y-8">
-                        <div className="bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-white/10 rounded-2xl p-8">
-                            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-                                <span>🏆</span> Current Rank
-                            </h2>
-                            <div className="text-5xl font-black mb-2 text-center py-4">#42</div>
-                            <p className="text-sm text-center text-gray-400">
-                                You are in the top 5% of active developers!
-                            </p>
-                        </div>
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">2/5</span>
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
+export default RewardsDashboard;

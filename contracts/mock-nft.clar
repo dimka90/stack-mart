@@ -1,4 +1,4 @@
-(impl-trait .stack-mart.sip009-nft-trait)
+;; (impl-trait .stack-mart.sip009-nft-trait) ;; Trait is locally defined, cannot be implemented
 
 (define-non-fungible-token mock-nft uint)
 

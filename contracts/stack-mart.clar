@@ -56,3 +56,4 @@
 (define-constant MAX_BUNDLE_SIZE u10)
 (define-constant MAX_PACK_SIZE u20)
 (define-constant MAX_DISCOUNT_BIPS u5000) ;; 50% max discount
+(define-constant BPS_DENOMINATOR u10000)

@@ -50,3 +50,6 @@
 
 ;; Marketplace fee constants
 (define-data-var marketplace-fee-bips uint u250) ;; 2.5% fee
+(define-data-var fee-recipient principal tx-sender) ;; Deployer is initial fee recipient
+
+;; Bundle and pack constants

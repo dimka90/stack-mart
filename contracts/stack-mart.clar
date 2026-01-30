@@ -1457,3 +1457,6 @@
 
 
 ;; Improved helper functions
+(define-read-only (get-seller-listing-count (seller principal))
+  (default-to u0 (map-get? seller-listing-count { seller: seller })))
+

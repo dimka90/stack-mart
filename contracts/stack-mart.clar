@@ -1356,3 +1356,10 @@
     ERR_NOT_FOUND))
 
 ;; Listing visibility and status management
+(define-map listing-status
+  { listing-id: uint }
+  { active: bool
+  , featured: bool
+  , promoted-until-block: uint
+  })
+

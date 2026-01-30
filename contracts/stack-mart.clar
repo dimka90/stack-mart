@@ -108,3 +108,8 @@
   })
 
 ;; Like system
+(define-map listing-likes-count
+  { listing-id: uint }
+  { count: uint })
+
+;; Delivery attestations

@@ -405,3 +405,6 @@
   , created-at-block: uint
   })
 
+(define-read-only (get-next-id)
+  (ok (var-get next-id)))
+

@@ -53,3 +53,4 @@
 (define-data-var fee-recipient principal tx-sender) ;; Deployer is initial fee recipient
 
 ;; Bundle and pack constants
+(define-constant MAX_BUNDLE_SIZE u10)

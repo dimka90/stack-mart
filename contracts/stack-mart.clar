@@ -1132,3 +1132,31 @@
     ERR_BUNDLE_NOT_FOUND))
 
 ;; Helper to create escrow for a listing in a bundle
+(define-private (create-bundle-escrow (listing-id uint) (context (response { discount: uint, buyer: principal } uint)))
+   (match context
+     ctx 
+       (match (map-get? listings { id: listing-id })
+         listing
+            (let ((price (get price listing))
+                  (discount (get discount ctx))
+                  (buyer (get buyer ctx))
+                  (discounted-price (/ (* price (- BPS_DENOMINATOR discount)) BPS_DENOMINATOR)))
+              (begin
+                 ;; Transfer discounted price to contract
+                 (try! (stx-transfer? discounted-price buyer (as-contract tx-sender)))
+                 
+                 ;; Create escrow
+                 (map-set escrows
+                   { listing-id: listing-id }
+                   { buyer: buyer
+                   , amount: discounted-price
+                   , created-at-block: burn-block-height
+                   , state: "pending"
+                   , timeout-block: (+ burn-block-height ESCROW_TIMEOUT_BLOCKS) })
+                 (ok ctx)))
+         ERR_NOT_FOUND)
+     error error))
+
+
+
+;; Create a curated pack

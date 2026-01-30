@@ -283,3 +283,16 @@
         (ok true)))))
 
 ;; Auction System
+(define-map auctions
+  { id: uint }
+  { seller: principal
+  , nft-contract: principal
+  , token-id: uint
+  , start-price: uint
+  , reserve-price: uint
+  , end-block: uint
+  , highest-bid: uint
+  , highest-bidder: (optional principal)
+  , state: (string-ascii 20) ;; "active", "ended", "cancelled"
+  })
+

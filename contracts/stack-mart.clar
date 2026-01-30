@@ -138,3 +138,5 @@
   uint)
 
 ;; Dispute resolution system
+(define-data-var next-dispute-id uint u1)
+

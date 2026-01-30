@@ -140,3 +140,15 @@
 ;; Dispute resolution system
 (define-data-var next-dispute-id uint u1)
 
+(define-map disputes
+  { id: uint }
+  { escrow-id: uint
+  , created-by: principal
+  , reason: (string-ascii 500)
+  , created-at-block: uint
+  , resolved: bool
+  , buyer-stakes: uint
+  , seller-stakes: uint
+  , resolution: (optional (string-ascii 20))
+  })
+

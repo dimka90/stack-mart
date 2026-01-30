@@ -315,3 +315,28 @@
       (var-set next-auction-id (+ id u1))
       (ok id))))
 
+(define-public (place-bid (auction-id uint) (amount uint))
+  (match (map-get? auctions { id: auction-id })
+    auction
+      (let ((current-bid (get highest-bid auction))
+            (current-bidder (get highest-bidder auction)))
+        (begin
+          (asserts! (is-eq (get state auction) "active") ERR_INVALID_STATE)
+          (asserts! (< burn-block-height (get end-block auction)) ERR_TIMEOUT_NOT_REACHED)
+          (asserts! (> amount current-bid) ERR_INVALID_LISTING) ;; Bid must be higher
+          (asserts! (>= amount (get start-price auction)) ERR_INVALID_LISTING)
+          
+          ;; Transfer STX to contract
+          (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
+          
+          ;; Refund previous bidder
+          (match current-bidder
+            prev-bidder (try! (as-contract (stx-transfer? current-bid tx-sender prev-bidder)))
+            true)
+            
+          (map-set auctions
+            { id: auction-id }
+            (merge auction { highest-bid: amount, highest-bidder: (some tx-sender) }))
+          (ok true)))
+    ERR_NOT_FOUND))
+

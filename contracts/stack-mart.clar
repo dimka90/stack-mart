@@ -88,3 +88,13 @@
   uint)
 
 ;; Escrow state: pending, delivered, confirmed, disputed, released, cancelled
+(define-map escrows
+  { listing-id: uint }
+  { buyer: principal
+  , amount: uint
+  , created-at-block: uint
+  , state: (string-ascii 20)
+  , timeout-block: uint
+  })
+
+;; Reputation system

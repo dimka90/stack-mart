@@ -245,3 +245,6 @@
           { history: (unwrap! (as-max-len? (append current-history { price: new-price, block-height: burn-block-height }) u10) (err u500)) })
         (ok true))))
 
+(define-read-only (get-wishlist (user principal))
+  (ok (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))
+

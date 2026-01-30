@@ -430,3 +430,7 @@
 , rating-count: u0
 })
 
+(define-read-only (get-user-reputation (user principal))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: user }))))
+
+;; Legacy aliases for compatibility

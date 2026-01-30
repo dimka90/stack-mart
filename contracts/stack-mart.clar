@@ -1229,3 +1229,9 @@
       (ok u0))))
 
 ;; Listing categories and search
+(define-map listing-categories
+  { listing-id: uint }
+  { category: (string-ascii 50)
+  , tags: (list 5 (string-ascii 20))
+  })
+

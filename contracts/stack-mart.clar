@@ -1432,3 +1432,28 @@
       , promoted-until-block: u0 })
     (ok true)))
 
+(define-public (emergency-refund-escrow (listing-id uint))
+  (begin
+    (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER)
+    (match (map-get? escrows { listing-id: listing-id })
+      escrow
+        (let ((buyer (get buyer escrow))
+              (amount (get amount escrow)))
+          (begin
+            ;; Refund to buyer
+            (try! (as-contract (stx-transfer? amount tx-sender buyer)))
+            ;; Update escrow state
+            (map-set escrows
+              { listing-id: listing-id }
+              { buyer: buyer
+              , amount: amount
+              , created-at-block: (get created-at-block escrow)
+              , state: "cancelled"
+              , timeout-block: (get timeout-block escrow) })
+            (ok true)))
+      ERR_ESCROW_NOT_FOUND)))
+
+;; Analytics and metrics
+
+
+;; Improved helper functions

@@ -1063,3 +1063,24 @@
                 (ok true)))))
     ERR_DISPUTE_NOT_FOUND))
 
+(define-public (claim-dispute-stake (dispute-id uint))
+  (match (map-get? disputes { id: dispute-id })
+    dispute
+      (match (map-get? dispute-stakes { dispute-id: dispute-id, staker: tx-sender })
+        stake
+          (let ((resolution (unwrap! (get resolution dispute) ERR_DISPUTE_NOT_FOUND))
+                (my-side (if (get side stake) "buyer" "seller")))
+            (begin
+              (asserts! (get resolved dispute) ERR_INVALID_STATE)
+              ;; If I voted for the winner, I get my stake back
+              ;; (Simplified: no reward from loser stakes yet, just refund)
+              (asserts! (is-eq resolution my-side) ERR_INVALID_SIDE)
+              
+              (try! (as-contract (stx-transfer? (get amount stake) tx-sender (get staker stake))))
+              
+              ;; Clear stake to prevent double claim
+              (map-delete dispute-stakes { dispute-id: dispute-id, staker: tx-sender })
+              (ok true)))
+        ERR_NOT_FOUND)
+    ERR_DISPUTE_NOT_FOUND))
+

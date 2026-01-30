@@ -1363,3 +1363,18 @@
   , promoted-until-block: uint
   })
 
+(define-public (set-listing-active (listing-id uint) (active bool))
+  (match (map-get? listings { id: listing-id })
+    listing
+      (begin
+        (asserts! (is-eq tx-sender (get seller listing)) ERR_NOT_OWNER)
+        (map-set listing-status
+          { listing-id: listing-id }
+          { active: active
+          , featured: (get featured (default-to { active: true, featured: false, promoted-until-block: u0 } 
+                                                (map-get? listing-status { listing-id: listing-id })))
+          , promoted-until-block: (get promoted-until-block (default-to { active: true, featured: false, promoted-until-block: u0 } 
+                                                                        (map-get? listing-status { listing-id: listing-id }))) })
+        (ok true))
+    ERR_NOT_FOUND))
+

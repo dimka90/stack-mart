@@ -67,3 +67,15 @@
 ;; Note: Using burn-block-height for timeout calculation
 (define-constant ESCROW_TIMEOUT_BLOCKS u144)
 
+(define-map listings
+  { id: uint }
+  { seller: principal
+  , price: uint
+  , royalty-bips: uint
+  , royalty-recipient: principal
+  , nft-contract: (optional principal)
+  , token-id: (optional uint)
+  , license-terms: (optional (string-ascii 500))
+  })
+
+;; Seller Indexing Maps

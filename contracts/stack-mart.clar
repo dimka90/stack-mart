@@ -452,3 +452,9 @@
 (define-data-var total-transactions uint u0)
 (define-data-var total-fees-collected uint u0)
 
+(define-private (update-marketplace-metrics (amount uint) (fee uint))
+  (begin
+    (var-set total-volume (+ (var-get total-volume) amount))
+    (var-set total-transactions (+ (var-get total-transactions) u1))
+    (var-set total-fees-collected (+ (var-get total-fees-collected) fee))))
+

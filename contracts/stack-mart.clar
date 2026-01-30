@@ -133,3 +133,8 @@
   , timestamp: uint
   })
 
+(define-map tx-index-counter
+  { principal: principal }
+  uint)
+
+;; Dispute resolution system

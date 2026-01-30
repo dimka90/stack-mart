@@ -61,3 +61,7 @@
 
 ;; Dispute resolution constants
 (define-constant MIN_STAKE_AMOUNT u1000) ;; Minimum stake amount
+(define-constant DISPUTE_RESOLUTION_THRESHOLD u5000) ;; Minimum total stakes to resolve
+
+;; Escrow timeout: 144 blocks (approximately 1 day assuming 10 min blocks)
+;; Note: Using burn-block-height for timeout calculation

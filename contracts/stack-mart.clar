@@ -1378,3 +1378,21 @@
         (ok true))
     ERR_NOT_FOUND))
 
+(define-public (promote-listing (listing-id uint) (duration-blocks uint))
+  (match (map-get? listings { id: listing-id })
+    listing
+      (begin
+        (asserts! (is-eq tx-sender (get seller listing)) ERR_NOT_OWNER)
+        ;; Charge promotion fee (simplified - in full implementation would have fee structure)
+        (let ((promotion-fee u1000)) ;; Fixed fee for now
+          (try! (stx-transfer? promotion-fee tx-sender (var-get fee-recipient))))
+        (map-set listing-status
+          { listing-id: listing-id }
+          { active: (get active (default-to { active: true, featured: false, promoted-until-block: u0 } 
+                                            (map-get? listing-status { listing-id: listing-id })))
+          , featured: true
+          , promoted-until-block: (+ burn-block-height duration-blocks) })
+        (ok true))
+    ERR_NOT_FOUND))
+
+;; Bulk operations for efficiency

@@ -28,3 +28,4 @@
 (define-constant ERR_NOT_FOUND (err u404))
 (define-constant ERR_NOT_OWNER (err u403))
 (define-constant ERR_NFT_TRANSFER_FAILED (err u500))
+(define-constant ERR_ESCROW_NOT_FOUND (err u404))

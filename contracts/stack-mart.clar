@@ -1084,3 +1084,8 @@
         ERR_NOT_FOUND)
     ERR_DISPUTE_NOT_FOUND))
 
+(define-read-only (get-bundle (bundle-id uint))
+  (match (map-get? bundles { id: bundle-id })
+    bundle (ok bundle)
+    ERR_BUNDLE_NOT_FOUND))
+

@@ -217,3 +217,8 @@
     (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) 
     (ok (var-set admin new-admin))))
 
+(define-public (set-marketplace-fee (new-fee uint)) 
+  (begin 
+    (asserts! (is-eq tx-sender (var-get admin)) ERR_NOT_OWNER) 
+    (ok (var-set marketplace-fee-bips new-fee))))
+

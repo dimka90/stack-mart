@@ -252,3 +252,6 @@
   (let ((current-wishlist (get listing-ids (default-to { listing-ids: (list) } (map-get? wishlists { user: user }))))) 
     (ok (is-some (index-of current-wishlist listing-id)))))
 
+(define-read-only (get-price-history (listing-id uint))
+  (ok (default-to { history: (list) } (map-get? price-history { listing-id: listing-id }))))
+

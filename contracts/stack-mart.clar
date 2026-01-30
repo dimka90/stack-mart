@@ -423,3 +423,10 @@
     ERR_ESCROW_NOT_FOUND))
 
 ;; Shared default reputation structure
+(define-constant DEFAULT_REPUTATION {
+  successful-txs: u0
+, failed-txs: u0
+, rating-sum: u0
+, rating-count: u0
+})
+

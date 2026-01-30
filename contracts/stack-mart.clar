@@ -1334,3 +1334,25 @@
         ERR_NOT_FOUND)
     ERR_NOT_FOUND))
 
+(define-public (cancel-offer (offer-id uint))
+  (match (map-get? offers { id: offer-id })
+    offer
+      (begin
+        (asserts! (is-eq tx-sender (get buyer offer)) ERR_NOT_OWNER)
+        (asserts! (not (get accepted offer)) ERR_INVALID_STATE)
+        (asserts! (not (get cancelled offer)) ERR_INVALID_STATE)
+        ;; Refund offer amount
+        (try! (as-contract (stx-transfer? (get amount offer) tx-sender (get buyer offer))))
+        ;; Mark offer as cancelled
+        (map-set offers
+          { id: offer-id }
+          { listing-id: (get listing-id offer)
+          , buyer: (get buyer offer)
+          , amount: (get amount offer)
+          , expires-at-block: (get expires-at-block offer)
+          , accepted: false
+          , cancelled: true })
+        (ok true))
+    ERR_NOT_FOUND))
+
+;; Listing visibility and status management

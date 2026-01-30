@@ -437,3 +437,14 @@
 (define-read-only (get-seller-reputation (seller principal))
   (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: seller }))))
 
+(define-read-only (get-buyer-reputation (buyer principal))
+  (ok (default-to { successful-txs: u0, failed-txs: u0, rating-sum: u0, rating-count: u0, total-volume: u0 } (map-get? reputation { user: buyer }))))
+
+;; Verify NFT ownership using SIP-009 standard (get-owner function)
+;; Note: In Clarity, contract-call? with variable principals works at runtime
+;; The trait is defined for documentation and type checking purposes
+;; verify-nft-ownership removed due to invalid Clarity syntax (principal as trait)
+
+
+;; Legacy function - kept for backward compatibility (no NFT)
+

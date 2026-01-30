@@ -397,3 +397,11 @@
   , created-at-block: uint
   })
 
+(define-map packs
+  { id: uint }
+  { listing-ids: (list 20 uint)
+  , price: uint
+  , curator: principal
+  , created-at-block: uint
+  })
+

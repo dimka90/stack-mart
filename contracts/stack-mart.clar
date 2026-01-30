@@ -27,3 +27,4 @@
 (define-constant ERR_BAD_ROYALTY (err u400))
 (define-constant ERR_NOT_FOUND (err u404))
 (define-constant ERR_NOT_OWNER (err u403))
+(define-constant ERR_NFT_TRANSFER_FAILED (err u500))
